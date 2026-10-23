@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="点位表">
+<title>现场设备点位表</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- ===================== 基础配置登录弹窗 ===================== -->
+<div id="loginView" class="login-view" role="dialog" aria-modal="true" aria-labelledby="configLoginTitle" hidden>
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="login-brand">
+      <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="#3b82f6"/>
+        <rect x="12" y="13" width="24" height="4" rx="2" fill="#fff" opacity=".95"/>
+        <rect x="12" y="22" width="24" height="4" rx="2" fill="#fff" opacity=".75"/>
+        <rect x="12" y="31" width="15" height="4" rx="2" fill="#fff" opacity=".55"/>
+      </svg>
+      <div>
+        <h1 id="configLoginTitle">登录基础配置</h1>
+        <p>基础配置需要管理员账号，其他页面可直接使用</p>
+      </div>
+    </div>
+    <label class="field">
+      <span>用户名</span>
+      <input type="text" id="loginUser" name="username" required autocomplete="username" placeholder="请输入用户名">
+    </label>
+    <label class="field">
+      <span>密码</span>
+      <input type="password" id="loginPwd" name="password" required autocomplete="current-password" placeholder="请输入密码">
+    </label>
+    <p class="form-msg" id="loginMsg" role="alert"></p>
+    <button type="submit" class="btn btn-primary btn-block">登 录</button>
+    <button type="button" class="btn btn-ghost btn-block" id="cancelLogin">取消，继续使用</button>
+    <button type="button" class="btn btn-ghost btn-block" id="goRegister">注册新账号</button>
+  </form>
+</div>
+
+<!-- ===================== 主应用 ===================== -->
+<div id="appView" hidden>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="icon-btn nav-toggle" id="navToggle" aria-label="页面导航" title="页面导航" aria-controls="sidenav" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <button class="icon-btn tree-toggle" id="treeToggle" aria-label="项目结构" title="项目结构" aria-controls="treePanel" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="brand-text">
+        <strong>现场设备点位表</strong>
+        <span id="brandSub">信号线编号自动生成</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" id="installBtn" hidden>安装到手机</button>
+      <div class="user-chip" id="userChip" title="">
+        <span class="avatar" id="userAvatar">?</span>
+        <span class="user-meta">
+          <span id="userName">—</span>
+          <span class="role-badge" id="userRole">—</span>
+        </span>
+      </div>
+      <button class="icon-btn" id="logoutBtn" aria-label="退出登录" title="退出登录">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 17l5-5-5-5M20 12H9M12 3H6a2 2 0 00-2 2v14a2 2 0 002 2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="sidenav" id="sidenav" aria-label="主导航">
+    <button class="nav-item active" data-page="overview">
+      <svg viewBox="0 0 24 24" width="19" height="19"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>
+      <span>项目总览</span>
+    </button>
+    <button class="nav-item" data-page="points">
+      <svg viewBox="0 0 24 24" width="19" height="19"><path d="M3 5h18v14H3zM3 10h18M9 10v9" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>
+      <span>现场设备点位表</span>
+    </button>
+    <button class="nav-item admin-only" data-page="signals">
+      <svg viewBox="0 0 24 24" width="19" height="19"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle cx="18" cy="18" r="2.5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      <span>信号类型配置</span>
+    </button>
+    <button class="nav-item" data-page="options">
+      <svg viewBox="0 0 24 24" width="19" height="19"><path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h8M16 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle cx="16" cy="7" r="2.2" stroke="currentColor" stroke-width="1.8" fill="none"/><circle cx="8" cy="12" r="2.2" stroke="currentColor" stroke-width="1.8" fill="none"/><circle cx="14" cy="17" r="2.2" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      <span>基础配置</span>
+    </button>
+    <button class="nav-item admin-only" data-page="users">
+      <svg viewBox="0 0 24 24" width="19" height="19"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M3.5 19a5.5 5.5 0 0111 0M16 11h5M16 15h4M16 7h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+      <span>用户与权限</span>
+    </button>
+    <div class="nav-foot">
+      <button class="nav-item" id="pwdNavBtn">
+        <svg viewBox="0 0 24 24" width="19" height="19"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M8 10V7a4 4 0 118 0v3" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+        <span>修改密码</span>
+      </button>
+    </div>
+  </nav>
+  <div class="nav-backdrop" id="navBackdrop"></div>
+
+  <!-- ============ 项目树侧栏 ============ -->
+  <aside class="tree-panel" id="treePanel">
+    <div class="tree-head">
+      <span class="tree-title">项目结构</span>
+      <button class="icon-btn tree-refresh" id="treeRefresh" title="刷新">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M20 11A8 8 0 006 5.3L4 7m0 0V3m0 4h4M4 13a8 8 0 0014 5.7l2-1.7m0 0v4m0-4h-4" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="tree-search">
+      <input type="search" id="treeFilter" placeholder="搜索项目 / 柜子 / 模块">
+    </div>
+    <div class="tree-body" id="treeBody"></div>
+  </aside>
+
+  <main class="content" id="content">
+
+    <!-- ============ 项目总览（默认首页，未选择模块时显示） ============ -->
+    <section class="page active" id="page-overview">
+      <div class="page-head">
+        <div class="page-head-main">
+          <h2 id="overviewTitle">项目总览</h2>
+          <p class="page-desc" id="overviewDesc">选择项目，查看项目中的控制柜总览</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost btn-sm" id="overviewBackBtn" hidden>返回项目列表</button>
+          <button class="btn btn-ghost btn-sm" id="overviewExportBtn" hidden>导出 Excel</button>
+          <button class="btn btn-primary btn-sm" id="newModuleBtn2">
+            <svg viewBox="0 0 24 24" width="17" height="17"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            新增模块
+          </button>
+        </div>
+      </div>
+      <div class="overview-stats" id="overviewStats"></div>
+      <div class="module-cards" id="moduleCards"></div>
+      <div class="empty-state standalone" id="overviewEmpty" hidden>
+        <svg viewBox="0 0 64 64" width="56" height="56"><path d="M10 18h14l4 5h26a2 2 0 012 2v25a2 2 0 01-2 2H10a2 2 0 01-2-2V20a2 2 0 012-2z" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round"/></svg>
+        <p>该项目下还没有模块</p>
+        <button class="btn btn-primary btn-sm" id="emptyAddBtn2">新增模块</button>
+      </div>
+    </section>
+
+    <!-- ============ 页面：现场设备点位表 ============ -->
+    <section class="page" id="page-points">
+      <div class="page-head">
+        <div class="page-head-main">
+          <h2 id="pointsTitle">现场设备点位表</h2>
+          <p class="page-desc" id="pointsSubtitle">填写设备点位与信号类型，系统自动生成编号与传感器类型</p>
+          <p class="owner-line" id="moduleOwner" hidden></p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost btn-sm" id="backToOverview">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            返回总览
+          </button>
+          <button class="btn btn-ghost btn-sm" id="exportBtn">导出 CSV</button>
+          <span class="save-state" id="pointsSaveState" aria-live="polite" hidden></span>
+          <button class="btn btn-primary btn-sm" id="savePointsBtn" disabled>保存</button>
+          <button class="btn btn-danger btn-sm" id="deleteModuleBtn" hidden>
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            删除模块
+          </button>
+          <button class="btn btn-primary btn-sm" id="newModuleBtn">
+            <svg viewBox="0 0 24 24" width="17" height="17"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            新增模块
+          </button>
+        </div>
+      </div>
+
+      <div class="filterbar">
+        <label class="filter filter-part">
+          <span>批量设置部位</span>
+          <select id="bulkPart"></select>
+          <button class="btn btn-ghost btn-sm" id="bulkPartBtn">应用</button>
+        </label>
+        <label class="filter">
+          <span>搜索</span>
+          <input type="search" id="filterSearch" placeholder="点位 / 编号 / PLC点位表达式">
+        </label>
+        <div class="filter-stats" id="filterStats"></div>
+      </div>
+
+      <p class="points-scroll-hint">左右滑动表格查看全部列，每行对应一个 PLC 通道。</p>
+      <div class="table-wrap" id="tableWrap" tabindex="0" role="region" aria-label="模块通道点位表，可横向滚动查看全部列">
+        <table class="data-table" id="pointsTable">
+          <thead>
+            <tr>
+              <th class="c-seq">序号</th>
+              <th class="c-part">设备部位</th>
+              <th class="c-point">设备点位</th>
+              <th class="c-signal">信号类型</th>
+              <th class="c-sensor">传感器类型</th>
+              <th class="c-code">编号</th>
+              <th class="c-plc">PLC点位表达式</th>
+              <th class="c-op">操作</th>
+            </tr>
+          </thead>
+          <tbody id="pointsBody"></tbody>
+        </table>
+        <div class="empty-state" id="pointsEmpty" hidden>
+          <svg viewBox="0 0 64 64" width="52" height="52"><rect x="10" y="14" width="44" height="36" rx="4" stroke="currentColor" stroke-width="2.5" fill="none"/><path d="M10 24h44M24 24v26M36 31h12M36 39h8" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+          <p>该模块下暂无点位数据</p>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="sw sw-edit"></i>可编辑</span>
+        <span><i class="sw sw-auto"></i>自动生成</span>
+        <span class="legend-tip">编号规则：<code>_设备部位_设备点位_信号缩写</code>，未填写或无传感器时显示 <code>Reserved</code></span>
+      </div>
+    </section>
+
+    <!-- ============ 页面：信号类型配置（管理员） ============ -->
+    <section class="page" id="page-signals">
+      <div class="page-head">
+        <div class="page-head-main">
+          <h2>信号类型配置</h2>
+          <p class="page-desc">维护信号类型、编号简写与传感器类型；按住表格行可上下拖动调整顺序，松开后自动保存</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary btn-sm" id="addSignalBtn">新增信号类型</button>
+        </div>
+      </div>
+      <div class="callout callout-info">
+        <strong>编号生成规则</strong>
+        <code>_</code> + 设备部位 + <code>_</code> + 设备点位 + <code>_</code> + 简写　　传感器类型 = 查表结果<br>
+        未填写设备部位、设备点位或信号类型时，编号显示为 <code>Reserved</code>。
+      </div>
+      <div class="table-wrap" id="signalsTableWrap">
+        <table class="data-table cfg-table" id="signalsTable">
+          <thead>
+            <tr>
+              <th class="c-seq">排序</th>
+              <th>信号类型</th>
+              <th>所属设备部位</th>
+              <th>简写</th>
+              <th>传感器类型</th>
+              <th>程序名称</th>
+              <th class="c-op">操作</th>
+            </tr>
+          </thead>
+          <tbody id="signalsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 页面：基础配置（管理员） ============ -->
+    <section class="page" id="page-options">
+      <div class="page-head">
+        <div class="page-head-main">
+          <h2>基础配置</h2>
+          <p class="page-desc">「新增模块」弹窗中各下拉框的可选项均在此维护</p>
+        </div>
+      </div>
+      <div class="opt-grid">
+        <div class="opt-card" data-opt="projects">
+          <div class="opt-head"><h3>项目名称</h3><button class="btn btn-ghost btn-sm" data-add="projects">+ 新增</button></div>
+          <div class="opt-list" id="opt-projects"></div>
+          <p class="opt-hint">按住项目条目拖动排序，松开后自动保存。</p>
+        </div>
+        <div class="opt-card" data-opt="cabinets">
+          <div class="opt-head"><h3>柜子号</h3><button class="btn btn-ghost btn-sm" data-add="cabinets">+ 新增</button></div>
+          <div class="opt-list" id="opt-cabinets"></div>
+        </div>
+        <div class="opt-card" data-opt="module_nos">
+          <div class="opt-head"><h3>模块号</h3><button class="btn btn-ghost btn-sm" data-add="module_nos">+ 新增</button></div>
+          <div class="opt-list" id="opt-module_nos"></div>
+        </div>
+        <div class="opt-card" data-opt="parts">
+          <div class="opt-head"><h3>设备部位</h3><button class="btn btn-ghost btn-sm" data-add="parts">+ 新增</button></div>
+          <div class="opt-list" id="opt-parts"></div>
+          <p class="opt-hint">部位以「名称 → 参数」对照，编号中取参数值。默认：现场→B、电机→M</p>
+        </div>
+        <div class="opt-card" data-opt="module_types">
+          <div class="opt-head"><h3>模块类型</h3><button class="btn btn-ghost btn-sm" data-add="module_types">+ 新增</button></div>
+          <div class="opt-list" id="opt-module_types"></div>
+          <p class="opt-hint">PLC 前缀：DI→I，DO→Q，AI→IW，AO→QW，用于自动生成 PLC 点位</p>
+        </div>
+      </div>
+      <div class="opt-card wide">
+        <div class="opt-head"><h3>模块型号</h3><button class="btn btn-ghost btn-sm" data-add="module_models">+ 新增</button></div>
+        <div class="opt-list" id="opt-module_models"></div>
+        <p class="opt-hint">「总通道数」决定新增模块时自动生成的点位行数与 PLC 点位数量</p>
+      </div>
+    </section>
+
+    <!-- ============ 页面：用户与权限（管理员） ============ -->
+    <section class="page" id="page-users">
+      <div class="page-head">
+        <div class="page-head-main">
+          <h2>用户与权限</h2>
+          <p class="page-desc">普通权限仅可使用「现场设备点位表」；管理员可配置信号类型与基础数据</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary btn-sm" id="addUserBtn">新增用户</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="c-seq">#</th><th>用户名</th><th>角色</th>
+              <th class="c-center">状态</th><th>创建时间</th><th class="c-op">操作</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== 新增模块弹窗 ===================== -->
+<div class="modal-mask" id="moduleModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="moduleModalTitle">
+    <div class="modal-head">
+      <h3 id="moduleModalTitle">新增模块</h3>
+      <button class="icon-btn" data-close="moduleModal" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field">
+          <span>项目名称 <i>*</i></span>
+          <select id="mProject" required></select>
+        </label>
+        <label class="field">
+          <span>柜子号 <i>*</i></span>
+          <select id="mCabinet" required></select>
+        </label>
+        <label class="field">
+          <span>模块号 <i>*</i></span>
+          <select id="mNo" required></select>
+        </label>
+        <label class="field">
+          <span>模块类型 <i>*</i></span>
+          <select id="mType" required></select>
+        </label>
+        <label class="field field-full">
+          <span>模块型号 <i>*</i></span>
+          <select id="mModel" required></select>
+        </label>
+        <label class="field field-full">
+          <span>备注</span>
+          <input type="text" id="mNote" placeholder="选填" maxlength="100">
+        </label>
+      </div>
+      <div class="preview-box" id="modulePreview">
+        <div class="preview-title">生成预览</div>
+        <div class="preview-body" id="previewBody">请选择模块型号以预览 PLC 点位</div>
+      </div>
+      <p class="form-msg" id="moduleMsg" role="alert"></p>
+    </div>
+    <div class="modal-foot modal-foot-split">
+      <span class="foot-hint" id="moduleFootHint">完成后将写入数据库并生成对应点位行</span>
+      <div class="foot-btns">
+        <button class="btn btn-ghost" data-close="moduleModal">取消</button>
+        <button class="btn btn-primary" id="moduleConfirm">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          完成
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 通用弹窗 ===================== -->
+<div class="modal-mask" id="formModal" hidden>
+  <div class="modal modal-sm" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="formModalTitle">编辑</h3>
+      <button class="icon-btn" data-close="formModal" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" id="formGrid"></div>
+      <p class="form-msg" id="formMsg" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="formModal">取消</button>
+      <button class="btn btn-primary" id="formConfirm">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 注册弹窗 ===================== -->
+<div class="modal-mask" id="registerModal" hidden>
+  <div class="modal modal-sm" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>注册新账号</h3>
+      <button class="icon-btn" data-close="registerModal" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="callout callout-info" style="margin-bottom:16px">
+        注册后为<strong style="display:inline">普通用户</strong>权限，可使用「现场设备点位表」。首次登录请修改密码。
+      </div>
+      <label class="field">
+        <span>用户名 <i>*</i></span>
+        <input type="text" id="regUser" autocomplete="username" placeholder="3–32 位字母、数字、_ . -">
+      </label>
+      <label class="field">
+        <span>密码 <i>*</i></span>
+        <input type="password" id="regPwd" autocomplete="new-password" placeholder="至少 6 位">
+      </label>
+      <label class="field">
+        <span>确认密码 <i>*</i></span>
+        <input type="password" id="regPwd2" autocomplete="new-password" placeholder="再次输入密码">
+      </label>
+      <p class="form-msg" id="registerMsg" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="registerModal">取消</button>
+      <button class="btn btn-primary" id="registerConfirm">注册</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

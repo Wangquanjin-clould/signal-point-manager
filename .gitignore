@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+/data/*
+!/data/.gitkeep
+/tmp/
+/.codex-pptx-build/
+/deploy/release/
+/deploy/update-release/
+/deploy/*.tar.gz
