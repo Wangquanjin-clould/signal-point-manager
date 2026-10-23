@@ -1,6 +1,6 @@
 # Android 离线版
 
-正式安装包为 `output/apk/SignalPointManager-1.0.2.apk`。支持 Android 8.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
+正式安装包为 `output/apk/SignalPointManager-1.0.3.apk`。支持 Android 8.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
 
 ## 首次使用
 
@@ -36,3 +36,5 @@
 IP 直连采用系统 CA 信任链、有效期验证和 VPS 证书公钥 SHA-256 固定校验，不关闭证书验证。现有证书仅含域名；若 VPS 更换证书公钥，需重新核实公钥并更新 APP。
 
 真机已验证正常停止应用后离线重启。该平板预装 WebView 113，在 ADB 强制停止后曾出现系统拒绝启动 WebView 子进程的白屏，重启平板恢复；强制停止与正常关闭是不同测试场景。
+
+界面采用沉浸式全屏，隐藏系统状态栏与导航栏，支持1280×800平板；从屏幕边缘滑动可临时显示系统栏，输入时保留软键盘避让。

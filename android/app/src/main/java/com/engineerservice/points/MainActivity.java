@@ -30,7 +30,10 @@ public class MainActivity extends Activity {
         database=SQLiteDatabase.openOrCreateDatabase(getDatabasePath("business.db"),null);
         database.setForeignKeyConstraintsEnabled(true);
         LinearLayout layout=new LinearLayout(this); layout.setOrientation(1);
-        layout.setPadding(0,28,0,16);
+        if(Build.VERSION.SDK_INT>=30)layout.setOnApplyWindowInsetsListener((view,insets)->{
+            view.setPadding(0,0,0,insets.getInsets(android.view.WindowInsets.Type.ime()).bottom);
+            return insets;
+        });
         web=new WebView(this);
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
@@ -55,6 +58,7 @@ public class MainActivity extends Activity {
             }
         });
         layout.addView(web,new LinearLayout.LayoutParams(-1,0,1)); setContentView(layout);
+        enterFullscreen();
         web.loadUrl("https://app.local/index.html");
         callback=new android.net.ConnectivityManager.NetworkCallback(){ @Override public void onAvailable(android.net.Network n) { runOnUiThread(()->web.evaluateJavascript("window.MobileRuntime && MobileRuntime.sync()",null)); }};
         ((android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE)).registerDefaultNetworkCallback(callback);
@@ -84,7 +88,21 @@ public class MainActivity extends Activity {
         }
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==91&&result==RESULT_OK&&data!=null&&pendingExport!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(pendingExport);Toast.makeText(this,"导出完成",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"导出失败",Toast.LENGTH_LONG).show();}}pendingExport=null;}
-    @Override protected void onResume(){super.onResume();visible=true;if(web!=null)web.evaluateJavascript("window.MobileRuntime && MobileRuntime.sync()",null);}
+    void enterFullscreen(){
+        if(Build.VERSION.SDK_INT>=30){
+            getWindow().setDecorFitsSystemWindows(false);
+            android.view.WindowInsetsController controller=getWindow().getInsetsController();
+            if(controller!=null){
+                controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                controller.hide(android.view.WindowInsets.Type.systemBars());
+            }
+        }else getWindow().getDecorView().setSystemUiVisibility(
+            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE|android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|
+            android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
+            android.view.View.SYSTEM_UI_FLAG_FULLSCREEN|android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+    }
+    @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus)enterFullscreen();}
+    @Override protected void onResume(){super.onResume();visible=true;enterFullscreen();if(web!=null)web.evaluateJavascript("window.MobileRuntime && MobileRuntime.sync()",null);}
     @Override protected void onPause(){visible=false;super.onPause();}
     @Override protected void onDestroy(){visible=false;if(callback!=null)((android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(callback);if(web!=null){web.removeJavascriptInterface("NativeStore");web.destroy();}if(database!=null)database.close();super.onDestroy();}
     @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("document.getElementById('backToOverview')?.click()",null);else super.onBackPressed();}
