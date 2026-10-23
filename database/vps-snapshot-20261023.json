@@ -1,0 +1,12 @@
+{
+  "created_at": "2026-10-23T01:06:06.278Z",
+  "source": "VPS signal-point-manager /data/signal-points.db",
+  "file": "vps-snapshot-20261023.db",
+  "sanitized": ["users", "sessions", "modules.created_by"],
+  "business_sha256": "556d1d475d4f806d28ed457ff9bdaf8296103f83c53f18e4a000bcb8dd7799d5",
+  "business_unchanged": true,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "counts": {"cabinets":110,"module_models":2,"module_nos":26,"module_types":4,"modules":10,"parts":2,"points":80,"project_cabinet_order":5,"projects":7,"signal_types":38,"users":0,"sessions":0},
+  "file_sha256": "2a0dd69ee1f43e041c6578a31091ad0d728794d4320aef19d711bf0e020cc10c"
+}
