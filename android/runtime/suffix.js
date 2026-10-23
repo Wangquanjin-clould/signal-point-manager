@@ -45,14 +45,25 @@ async function localRequest(input,options={}){
  const body=options.body?JSON.parse(options.body):{};
  let data,code=200;
  if(url.pathname.startsWith('/api/auth/')){
-   if(url.pathname.endsWith('/login')){if(body.username!=='mobile'||!NativeStore.unlock(body.password))code=401;else localUser={id:null,username:'mobile',role:'admin',must_change_pwd:0};}
-   if(url.pathname.endsWith('/logout'))localUser=null;
-   data=code===401?{error:'本机基础配置登录：使用 mobile 和同步密钥'}:{user:localUser,allow_register:false,enabled:false};
+   if(url.pathname.endsWith('/login')){
+     localUser=null;
+     if(body.username==='mobile'&&NativeStore.unlock(body.password))localUser={id:null,username:'mobile',role:'admin',mustChangePwd:false};
+     else try{
+       const result=await remoteRequest('AUTH_LOGIN',JSON.stringify(body));
+       localUser={...result.user,server_id:result.user.id,id:null};
+     }catch(error){code=401;data={error:error.message};}
+   }
+   if(url.pathname.endsWith('/logout')){localUser=null;NativeStore.clearLogin();}
+   if(url.pathname.endsWith('/password')){
+     if(!localUser?.server_id){code=400;data={error:'请使用服务器账号联网登录后修改密码'};}
+     else try{data=await remoteRequest('AUTH_PASSWORD',JSON.stringify(body));localUser.mustChangePwd=false;}catch(error){code=400;data={error:error.message};}
+   }
+   if(!data)data={user:localUser,allow_register:false,enabled:false};
  }else if(url.pathname.startsWith('/api/users')){code=403;data={error:'账号请在 VPS 网站维护，手机不保存服务器账号和密码哈希'};}
  else{
    const hit=matchRoute(method,url.pathname);
    if(!hit){code=404;data={error:'接口不存在'};}
-   else if(hit.r.admin&&!localUser){code=403;data={error:'基础配置需登录'};}
+   else if(hit.r.admin&&localUser?.role!=='admin'){code=403;data={error:'基础配置需要管理员账号'};}
    else{
      const res={status:200,headers:{},writeHead(s,h){this.status=s;this.headers=h;},end(v){this.bytes=typeof v==='string'?Buffer.from(v):v;}};
      const write=method!=='GET';

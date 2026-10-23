@@ -19,7 +19,8 @@ public class MobileStore {
     protected final android.content.SharedPreferences prefs;
     private final java.util.function.BiConsumer<String,String> resultCallback;
     private long lastClockOffset=Long.MIN_VALUE;
-    public MobileStore(SQLiteDatabase database,android.content.SharedPreferences prefs,java.util.function.BiConsumer<String,String> callback){this.database=database;this.prefs=prefs;this.resultCallback=callback;}
+    private final ServerAuth serverAuth;
+    public MobileStore(SQLiteDatabase database,android.content.SharedPreferences prefs,java.util.function.BiConsumer<String,String> callback){this.database=database;this.prefs=prefs;this.resultCallback=callback;this.serverAuth=new ServerAuth(prefs);}
         @JavascriptInterface public synchronized String sql(String kind,String sql,String params) {
             try {
                 long anchor=prefs.getLong("serverElapsed",-1), at=prefs.getLong("serverAt",0);
@@ -45,6 +46,7 @@ public class MobileStore {
         @JavascriptInterface public void serverTime(long timestamp){prefs.edit().putLong("serverAt",timestamp).putLong("serverElapsed",SystemClock.elapsedRealtime()).apply();}
         @JavascriptInterface public void initializedOK(){prefs.edit().putBoolean("initialized",true).apply();}
         @JavascriptInterface public boolean unlock(String password){return !prefs.getString("token","").isEmpty() && prefs.getString("token","").equals(password);}
+        @JavascriptInterface public void clearLogin(){serverAuth.logout();}
         @JavascriptInterface public void httpAsync(String method,String payload,String requestId) {
             new Thread(()->{
                 String result=http(method,payload);
@@ -52,6 +54,7 @@ public class MobileStore {
             },"mobile-sync").start();
         }
         @JavascriptInterface public String http(String method,String payload) {
+            if(method.equals("AUTH_LOGIN")||method.equals("AUTH_PASSWORD"))return serverAuth.execute(method,payload);
             HttpURLConnection c=null;
             try {
                 String base=prefs.getString("url","");String token=prefs.getString("token","");

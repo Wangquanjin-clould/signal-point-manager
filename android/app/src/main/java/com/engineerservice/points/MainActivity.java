@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
         LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(30,8,30,8);
         EditText url=new EditText(this);url.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);url.setHint("VPS HTTPS 地址");url.setText(prefs.getString("url","https://107.173.154.48:10443"));box.addView(url);
         EditText token=new EditText(this);token.setHint("移动端同步密钥");token.setInputType(129);token.setText(prefs.getString("token",""));box.addView(token);
-        new AlertDialog.Builder(this).setTitle("首次下载 / 同步设置").setView(box).setMessage("数据库保存在手机。首次下载需联网，之后可离线使用。同步密钥也用于本机基础配置登录（账号 mobile）。")
+        new AlertDialog.Builder(this).setTitle("首次下载 / 同步设置").setView(box).setMessage("数据库保存在手机。首次下载需联网，之后可离线使用。基础配置使用服务器管理员账号，联网登录成功后可离线登录。")
           .setNegativeButton("取消",null).setPositiveButton("保存并同步",(d,w)->{
               String base=url.getText().toString().trim().replaceAll("/+$","");
               boolean https=base.startsWith("https://") && Uri.parse(base).getHost()!=null;
