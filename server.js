@@ -844,7 +844,25 @@ route('PUT', '/api/modules/:id', async ({ req, res, params, user }) => {
   }
   const b = await readBody(req);
   const note = b.note === undefined ? cur.note : str(b.note, 200);
-  db.prepare('UPDATE modules SET note = ? WHERE id = ?').run(note, id);
+  const moduleNo = b.module_no === undefined ? cur.module_no : str(b.module_no,32).trim();
+  if(!moduleNo)return sendJson(res,400,{error:'模块号不能为空'});
+  if(db.prepare('SELECT id FROM modules WHERE project_id=? AND cabinet_id=? AND module_no=? AND id<>?').get(cur.project_id,cur.cabinet_id,moduleNo,id))
+    return sendJson(res,409,{error:`柜子 ${cur.cabinet_name} 的模块号 ${moduleNo} 已存在，请使用其他模块号`});
+  db.exec('BEGIN IMMEDIATE');
+  try{
+    db.prepare('UPDATE modules SET note=?,module_no=? WHERE id=?').run(note,moduleNo,id);
+    if(moduleNo!==cur.module_no){
+      const points=db.prepare('SELECT id,plc_point FROM points WHERE module_id=? ORDER BY sort_order,id').all(id);
+      const update=db.prepare('UPDATE points SET plc_point=?,updated_at=? WHERE id=?');
+      const now=new Date().toISOString();
+      const prefix=`_${cur.cabinet_name}:${cur.module_no}:`;
+      for(const point of points){
+        const address=String(point.plc_point||'');
+        if(address.startsWith(prefix))update.run(`_${cur.cabinet_name}:${moduleNo}:`+address.slice(prefix.length),now,point.id);
+      }
+    }
+    db.exec('COMMIT');
+  }catch(error){db.exec('ROLLBACK');throw error;}
   sendJson(res, 200, { ok: true });
 });
 

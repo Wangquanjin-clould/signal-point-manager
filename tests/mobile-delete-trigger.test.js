@@ -22,7 +22,7 @@ test('confirmed point deletion syncs, cancellation and rejection do not; unrelat
  const accepted=fixture();await accepted.deletePoint();await accepted.flush();assert.equal(accepted.state.points.length,1);assert.equal(accepted.state.points[0].point_name,'G77');assert.equal(accepted.state.pointsDirty,true);assert.equal(accepted.network.length,1);
 });
 test('only successful DELETE or module Save trigger sync; normal reads and edits remain local',async()=>{
- for(const [method,url,code,expected] of [['DELETE','/api/modules/1',200,1],['DELETE','/api/config/projects/1',200,1],['DELETE','/api/modules/1',409,0],['GET','/api/tree',200,0],['PATCH','/api/signal-types/1',200,0],['PUT','/api/modules/1/points',200,1]]){
+ for(const [method,url,code,expected] of [['DELETE','/api/modules/1',200,1],['DELETE','/api/config/projects/1',200,1],['DELETE','/api/modules/1',409,0],['GET','/api/tree',200,0],['PATCH','/api/signal-types/1',200,0],['PUT','/api/modules/1/points',200,1],['PUT','/api/modules/1',200,1]]){
   const f=fixture(code);await f.request(method,url);await f.flush();assert.equal(f.network.length,expected,method+' '+url+' '+code);
  }
 });

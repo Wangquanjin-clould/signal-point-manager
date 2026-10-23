@@ -695,6 +695,7 @@ function renderOverview() {
         <td><strong>${esc(m.module_no)}</strong></td><td>${esc(m.module_type_name)}</td><td>${esc(m.module_model_name)}</td>
         <td>${used} / ${spare}</td><td><div class="progress module-list-progress"><i class="${pct < 100 ? 'low' : ''}" style="width:${pct}%"></i></div>${pct}%</td>
         <td class="module-list-actions"><button class="btn btn-ghost btn-sm act-open">查看明细</button>
+          ${m.can_manage ? `<button class="btn btn-ghost btn-sm act-edit" data-mid="${m.id}">编辑</button>` : ''}
           ${m.can_manage ? `<button class="btn btn-danger btn-sm act-del" data-mid="${m.id}">删除</button>` : ''}</td>
       </tr>`;
     }).join('')}</tbody>
@@ -725,6 +726,20 @@ async function deleteModule(moduleId, meta) {
 }
 
 $('#moduleCards').addEventListener('click', (e) => {
+  const edit=e.target.closest('.act-edit');
+  if(edit){
+    e.stopPropagation();
+    if(!confirmDiscardPointDraft())return;
+    const module=state.modules.find(item=>item.id===Number(edit.dataset.mid));
+    if(!module)return;
+    openFormModal({title:'编辑模块号',confirmText:'保存',fields:[{key:'module_no',label:'模块号',value:module.module_no,required:true,maxlength:32}],
+      onConfirm:async values=>{
+        const moduleNo=values.module_no.trim();if(!moduleNo)throw Error('模块号不能为空');
+        await api(`/api/modules/${module.id}`,{method:'PUT',body:{module_no:moduleNo}});
+        await loadTree();renderOverview();toast('模块号已更新','ok');
+      }});
+    return;
+  }
   const del = e.target.closest('.act-del');
   if (del) {
     if (!confirmDiscardPointDraft()) return;

@@ -75,7 +75,7 @@ async function localRequest(input,options={}){
  }
  if(code<400 && method!=='GET' && !url.pathname.startsWith('/api/auth/')){
  status('已保存到本机 · 点击保存或立即同步后上传');
- if(method==='DELETE' || (method==='PUT' && /^\/api\/modules\/\d+\/points$/.test(url.pathname)))setTimeout(savedSync,0);
+ if(method==='DELETE' || (method==='PUT' && /^\/api\/modules\/\d+(?:\/points)?$/.test(url.pathname)))setTimeout(savedSync,0);
  }
  return {ok:code<400,status:code,json:async()=>data};
 }

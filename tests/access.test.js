@@ -114,6 +114,16 @@ test('免登录现场业务与管理员配置权限', async () => {
     assert.equal(created.status, 200);
     assert.equal(created.data.module.created_by, null);
     const mid = created.data.id;
+    const beforeRename=(await request('/api/points?module_id='+mid)).data.items;
+    assert.equal((await request('/api/modules/'+mid,'PUT',{module_no:'renamed-module'})).status,200);
+    const afterRename=(await request('/api/points?module_id='+mid)).data.items;
+    assert.deepEqual(afterRename.map(p=>p.id),beforeRename.map(p=>p.id));
+    assert.ok(afterRename.every(p=>p.plc_point.includes(':renamed-module:')));
+    const renameConflict=await request('/api/modules','POST',{...payload,module_no:'rename-conflict'});
+    assert.equal((await request('/api/modules/'+mid,'PUT',{module_no:'rename-conflict'})).status,409);
+    await request('/api/modules/'+renameConflict.data.id,'DELETE');
+    assert.equal((await request('/api/modules/'+mid,'PUT',{module_no:'   '})).status,400);
+    assert.equal((await request('/api/modules/'+mid,'PUT',{module_no:'guest-test'})).status,200);
     const otherModel = config.module_models.find(m => m.module_type_id !== model.module_type_id);
     for (const duplicatePayload of [payload, { ...payload, module_type_id: otherModel.module_type_id, module_model_id: otherModel.id }, { ...payload, module_no: ' guest-test ' }]) {
       const duplicate = await request('/api/modules', 'POST', duplicatePayload);
