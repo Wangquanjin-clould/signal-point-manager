@@ -64,7 +64,7 @@ async function localRequest(input,options={}){
  }
  if(code<400 && method!=='GET' && !url.pathname.startsWith('/api/auth/')){
  status('已保存到本机 · 点击保存或立即同步后上传');
- if(method==='PUT' && /^\/api\/modules\/\d+\/points$/.test(url.pathname))setTimeout(savedSync,0);
+ if(method==='DELETE' || (method==='PUT' && /^\/api\/modules\/\d+\/points$/.test(url.pathname)))setTimeout(savedSync,0);
  }
  return {ok:code<400,status:code,json:async()=>data};
 }
@@ -79,6 +79,20 @@ window.MobileRuntime={sync,db,onHttpResult(id,text){const r=requests.get(id);if(
 }};
 if(NativeStore.initialized()){MobileSync.install(db);installed=true;}
 document.addEventListener('DOMContentLoaded',()=>{
+ document.getElementById('pointsBody').addEventListener('click',async event=>{
+   const button=event.target.closest('button.del');if(!button)return;
+   event.stopImmediatePropagation();
+   if(!confirm('确定删除该点位行？'))return;
+   const id=Number(button.closest('tr').dataset.id),draftDirty=window.__state.pointsDirty;
+   button.disabled=true;
+   try{
+     const response=await localRequest('/api/points/'+id,{method:'DELETE'});
+     if(!response.ok)throw Error((await response.json()).error);
+     window.__state.points=window.__state.points.filter(point=>point.id!==id);
+     renderPoints();refreshSeqAndStats();setPointsDirty(draftDirty);await loadTree();
+     toast('点位已删除','ok');
+   }catch(error){button.disabled=false;toast(error.message,'err');}
+ },true);
  const pointKeyboard=()=>{
    const input=document.activeElement;
    if(!input?.matches('input[data-k="point_name"]')){NativeStore.pointKeyboard(0);return;}
