@@ -21,9 +21,10 @@ public class MainActivity extends Activity {
     android.content.SharedPreferences prefs;
     android.net.ConnectivityManager.NetworkCallback callback;
     byte[] pendingExport;
+    int pointKeyboardMode=0;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        ((android.app.job.JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE)).schedule(new android.app.job.JobInfo.Builder(901,new ComponentName(this,SyncJobService.class)).setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY).setPeriodic(15*60*1000).setPersisted(true).build());
+        ((android.app.job.JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE)).cancel(901);
         prefs=getSharedPreferences("mobile",MODE_PRIVATE);
         if(prefs.getString("url","").equals("https://www.engineer-service-report.top:10443"))prefs.edit().putString("url","https://107.173.154.48:10443").apply();
         File dir=getDatabasePath("business.db").getParentFile(); dir.mkdirs();
@@ -34,7 +35,19 @@ public class MainActivity extends Activity {
             view.setPadding(0,0,0,insets.getInsets(android.view.WindowInsets.Type.ime()).bottom);
             return insets;
         });
-        web=new WebView(this);
+        web=new WebView(this){
+            @Override public android.view.inputmethod.InputConnection onCreateInputConnection(android.view.inputmethod.EditorInfo info){
+                android.view.inputmethod.InputConnection connection=super.onCreateInputConnection(info);
+                if(pointKeyboardMode==0||connection==null)return connection;
+                info.inputType=pointKeyboardMode==2?android.text.InputType.TYPE_CLASS_NUMBER:
+                    android.text.InputType.TYPE_CLASS_TEXT|
+                    android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+                if(pointKeyboardMode==1){info.imeOptions|=android.view.inputmethod.EditorInfo.IME_FLAG_FORCE_ASCII;info.initialCapsMode=android.text.TextUtils.CAP_MODE_CHARACTERS;}
+                return new android.view.inputmethod.InputConnectionWrapper(connection,false){
+                    @Override public int getCursorCapsMode(int modes){return pointKeyboardMode==1?android.text.TextUtils.CAP_MODE_CHARACTERS:super.getCursorCapsMode(modes);}
+                };
+            }
+        };
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -60,8 +73,6 @@ public class MainActivity extends Activity {
         layout.addView(web,new LinearLayout.LayoutParams(-1,0,1)); setContentView(layout);
         enterFullscreen();
         web.loadUrl("https://app.local/index.html");
-        callback=new android.net.ConnectivityManager.NetworkCallback(){ @Override public void onAvailable(android.net.Network n) { runOnUiThread(()->web.evaluateJavascript("window.MobileRuntime && MobileRuntime.sync()",null)); }};
-        ((android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE)).registerDefaultNetworkCallback(callback);
         if(prefs.getString("token","").isEmpty())new Handler(Looper.getMainLooper()).postDelayed(this::configure,900);
     }
     WebResourceResponse denied(){return new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.emptyMap(),new ByteArrayInputStream(new byte[0]));}
@@ -82,6 +93,13 @@ public class MainActivity extends Activity {
     public class Bridge extends MobileStore {
         Bridge(){super(MainActivity.this.database,MainActivity.this.prefs,(id,result)->{if(web!=null&&!isDestroyed())web.evaluateJavascript("MobileRuntime.onHttpResult("+JSONObject.quote(id)+","+JSONObject.quote(result)+")",null);});}
         @JavascriptInterface public void openSyncSettings(){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())configure();});}
+        @JavascriptInterface public void pointKeyboard(int mode){runOnUiThread(()->{
+            if(web==null||isDestroyed()||mode<0||mode>2||pointKeyboardMode==mode)return;
+            pointKeyboardMode=mode;
+            android.view.inputmethod.InputMethodManager keyboard=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            keyboard.restartInput(web);
+            if(mode>0)web.postDelayed(()->{if(pointKeyboardMode==mode&&web.hasWindowFocus())keyboard.showSoftInput(web,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);},100);
+        });}
         @JavascriptInterface public void saveFile(String base64,String name,String mime){
             pendingExport=android.util.Base64.decode(base64,android.util.Base64.DEFAULT);
             runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,name);startActivityForResult(i,91);});
@@ -102,7 +120,7 @@ public class MainActivity extends Activity {
             android.view.View.SYSTEM_UI_FLAG_FULLSCREEN|android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     }
     @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus)enterFullscreen();}
-    @Override protected void onResume(){super.onResume();visible=true;enterFullscreen();if(web!=null)web.evaluateJavascript("window.MobileRuntime && MobileRuntime.sync()",null);}
+    @Override protected void onResume(){super.onResume();visible=true;enterFullscreen();}
     @Override protected void onPause(){visible=false;super.onPause();}
     @Override protected void onDestroy(){visible=false;if(callback!=null)((android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(callback);if(web!=null){web.removeJavascriptInterface("NativeStore");web.destroy();}if(database!=null)database.close();super.onDestroy();}
     @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("document.getElementById('backToOverview')?.click()",null);else super.onBackPressed();}

@@ -1,4 +1,4 @@
-let localUser=null,busy=false,installed=false,lastSync='尚未同步',ready=Promise.resolve();
+let localUser=null,busy=false,installed=false,syncAfterSave=false,lastSync='本机模式 · 点击保存后同步',ready=Promise.resolve();
 const requests=new Map();let requestId=0;
 function remoteRequest(method,body){return new Promise((resolve,reject)=>{
  const id=String(++requestId),timer=setTimeout(()=>{requests.delete(id);reject(Error('同步超时，离线数据已保留'));},40000);
@@ -25,7 +25,7 @@ async function sync(){
    MobileSync.merge(db,payload.records,{preferIncoming:true,now:payload.server_time,validate:MobileSync.validateBusiness});
    NativeStore.initializedOK();
    status('已同步 '+new Date().toLocaleTimeString()+' · 数据已保存在本机');
-   if(!had){location.reload();return;}
+   if(!had){await enterApp();return;}
    if(window.__state&&!window.__state.pointsDirty){
      await Promise.all([loadConfig(),loadSignals(),loadTree()]);
      if(window.__state.currentModuleId){
@@ -35,8 +35,9 @@ async function sync(){
      renderOverview();
    }
  }catch(e){status((NativeStore.initialized()?'离线可用 / 同步未完成：':'首次运行需联网下载：')+e.message);}
- finally{busy=false;}
+ finally{busy=false;if(syncAfterSave){syncAfterSave=false;sync();}}
 }
+function savedSync(){if(busy)syncAfterSave=true;else sync();}
 async function localRequest(input,options={}){
  await ready;
  const url=new URL(input,'https://app.local'),method=options.method||'GET';
@@ -61,7 +62,10 @@ async function localRequest(input,options={}){
      }catch(e){if(write&&transactionDepth)db.exec('ROLLBACK');code=409;data={error:e.message};}
    }
  }
- if(code<400 && method!=='GET' && !url.pathname.startsWith('/api/auth/'))status('已保存到本机 · 等待联网同步');
+ if(code<400 && method!=='GET' && !url.pathname.startsWith('/api/auth/')){
+ status('已保存到本机 · 点击保存或立即同步后上传');
+ if(method==='PUT' && /^\/api\/modules\/\d+\/points$/.test(url.pathname))setTimeout(savedSync,0);
+ }
  return {ok:code<400,status:code,json:async()=>data};
 }
 window.fetch=(url,opts)=>localRequest(url,opts);
@@ -75,11 +79,19 @@ window.MobileRuntime={sync,db,onHttpResult(id,text){const r=requests.get(id);if(
 }};
 if(NativeStore.initialized()){MobileSync.install(db);installed=true;}
 document.addEventListener('DOMContentLoaded',()=>{
+ const pointKeyboard=()=>{
+   const input=document.activeElement;
+   if(!input?.matches('input[data-k="point_name"]')){NativeStore.pointKeyboard(0);return;}
+   const numeric=/^[A-Za-z]/.test(input.value)&&(input.selectionStart??input.value.length)>0;
+   input.inputMode=numeric?'numeric':'text';input.autocapitalize='characters';input.spellcheck=false;
+   NativeStore.pointKeyboard(numeric?2:1);
+ };
+ for(const name of ['focusin','focusout','input','selectionchange'])document.addEventListener(name,pointKeyboard);
  document.getElementById('mobileSyncNavBtn').addEventListener('click',()=>{closeDrawers();NativeStore.openSyncSettings();});
  const bar=document.createElement('div');bar.id='mobileSyncStatus';bar.style.cssText='padding:6px 14px;background:transparent;color:#173467;font-size:12px;position:fixed;bottom:0;left:0;right:0;z-index:9999;';bar.textContent=lastSync;document.body.append(bar);
- if(!NativeStore.initialized())sync();else setTimeout(sync,1500);
+ if(!NativeStore.initialized())sync();
 });
-window.addEventListener('online',sync);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});
-setInterval(()=>{if(!document.hidden)sync();},30000);
+
+
+
 })();

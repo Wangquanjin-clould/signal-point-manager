@@ -75,12 +75,7 @@ async function shot(name){const r=await cdp('Page.captureScreenshot',{format:'pn
   await local('/api/modules/'+mod.id,{},'DELETE');await evaluate('MobileRuntime.sync()');await until("document.getElementById('mobileSyncStatus').textContent.startsWith('已同步')");
   after=await remote();assert.ok(!after.records.some(r=>r.table==='modules'&&!r.deleted&&r.data.module_no===no));pass('module deletion and cascading point tombstones synchronize without resurrection');
   await shot('03-after-reconnect');
-  const bgName='后台任务验证-'+Date.now();
-  await evaluate(`MobileRuntime.db.prepare('INSERT INTO projects(name,sort_order) VALUES(?,0)').run('${bgName}')`);
-  shell('shell','input','keyevent','KEYCODE_HOME');await delay(1000);
-  shell('shell','cmd','jobscheduler','run','-f',pkg,'901');
-  let bgFound=false;for(let i=0;i<45;i++){if((await remote()).records.some(r=>r.table==='projects'&&r.data.name===bgName)){bgFound=true;break;}await delay(1000);}
-  assert.ok(bgFound,'OS background job did not upload local row');pass('Android JobScheduler syncs SQLite while activity is in background');
+  const jobs=shell('shell','dumpsys','jobscheduler',pkg);assert.ok(!jobs.includes('JOB #'));pass('periodic background synchronization is disabled');
   fs.writeFileSync(path.join(out,'simulation-report.json'),JSON.stringify({android:real?'ERAZER N10B Android 14 real tablet':'35 x86_64 emulator',tested_at:new Date().toISOString(),production_modified:false,tests:report},null,2));
  } finally {if(!real){shell('shell','wm','size','reset');shell('shell','wm','density','reset');shell('shell','wm','user-rotation','free');}else{shell('reverse','tcp:8793','tcp:8793');}shell('shell','cmd','connectivity','airplane-mode','disable');shell('shell','svc','wifi','enable');shell('shell','svc','data','enable');ws?.close();}
 })().catch(e=>{console.error(e);fs.writeFileSync(path.join(out,'simulation-failure.json'),JSON.stringify({tests:report,error:e.stack},null,2));process.exitCode=1;});
