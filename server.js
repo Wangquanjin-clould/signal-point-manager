@@ -20,6 +20,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SESSION_TTL = 1000 * 60 * 60 * 12; // 12 小时
 const COOKIE_NAME = 'spt_sid';
+const mobileSync = require('./sync-core');
+mobileSync.install(db);
 
 /* ------------------------------------------------------------------ */
 /* 工具                                                                */
@@ -347,6 +349,34 @@ function matchRoute(method, pathname) {
 
 /* ============================ 认证 API ============================ */
 
+function mobileAuthorized(req) {
+  const expected = process.env.MOBILE_SYNC_TOKEN || '';
+  const actual = String(req.headers['x-mobile-sync-token'] || '');
+  if (expected.length < 32 || Buffer.byteLength(actual) !== Buffer.byteLength(expected)) return false;
+  return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+}
+function mobileSnapshot() {
+  const names = [...mobileSync.tables, 'users'];
+  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND type='table' ORDER BY rowid").all()
+    .filter(r => names.some(t => new RegExp('CREATE TABLE\\s+(?:IF NOT EXISTS\\s+)?["`]?'+t+'["`]?\\s*\\(', 'i').test(r.sql)))
+    .map(r => r.sql);
+  const guards = db.prepare("SELECT sql FROM sqlite_master WHERE name IN ('modules_unique_number_insert','modules_unique_number_update','idx_parts_param')").all().map(r=>r.sql);
+  return { version:1, server_time:Date.now(), schema:[...schema,...guards], records:mobileSync.snapshot(db) };
+}
+route('GET', '/api/mobile/sync', async ({req,res}) => {
+  if(!mobileAuthorized(req)) return sendJson(res,401,{error:'需要有效的移动端同步密钥'});
+  sendJson(res,200,mobileSnapshot());
+}, {public:true});
+route('POST', '/api/mobile/sync', async ({req,res}) => {
+  if(!mobileAuthorized(req)) return sendJson(res,401,{error:'需要有效的移动端同步密钥'});
+  const body=await readBody(req,20*1024*1024);
+  if(body.version!==1) return sendJson(res,400,{error:'同步协议版本不兼容'});
+  try {
+    const merged=mobileSync.merge(db,body.records,{validate:mobileSync.validateBusiness});
+    sendJson(res,200,{...mobileSnapshot(),merged});
+  } catch(e) { sendJson(res,409,{error:'同步未提交，请处理数据冲突后重试：'+e.message}); }
+}, {public:true});
+
 route('POST', '/api/auth/login', async ({ req, res, ip }) => {
   const key = ip;
   if (throttled(key)) {
@@ -573,8 +603,7 @@ route('POST', '/api/projects/:id/cabinets/reorder', async ({ req, res, params })
   if (ids.length !== current.length || current.some(c => !ids.includes(c.id))) return sendJson(res, 409, { error: '项目中的柜子已变化，请刷新后重新排序' });
   db.exec('BEGIN IMMEDIATE');
   try {
-    db.prepare('DELETE FROM project_cabinet_order WHERE project_id=?').run(projectId);
-    const insert = db.prepare('INSERT INTO project_cabinet_order(project_id,cabinet_id,sort_order) VALUES(?,?,?)');
+    const insert = db.prepare('INSERT INTO project_cabinet_order(project_id,cabinet_id,sort_order) VALUES(?,?,?) ON CONFLICT(project_id,cabinet_id) DO UPDATE SET sort_order=excluded.sort_order');
     ids.forEach((id, index) => insert.run(projectId, id, index));
     db.exec('COMMIT');
   } catch (err) { db.exec('ROLLBACK'); throw err; }

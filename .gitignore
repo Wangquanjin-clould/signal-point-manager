@@ -15,3 +15,12 @@ node_modules/
 
 *.db-wal
 *.db-shm
+/android/.gradle/
+/android/local.properties
+/android/**/build/
+/android/app/src/main/assets/web/
+/mobile-test-results/
+/.mobile-secrets/
+/android/.signing/
+/output/android-tests/
+/output/apk/

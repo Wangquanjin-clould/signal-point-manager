@@ -1,0 +1,21 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),{once}=require('node:events'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+test('mobile HTTP authorization, private snapshot, latest-wins and atomic rejection',async t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'spt-mobile-http-'));
+ fs.copyFileSync('database/vps-snapshot-20261023.db',path.join(dir,'signal-points.db'));
+ const token='test-only-token-for-mobile-http-fixture';
+ const child=spawn(process.execPath,['-e',"const s=require('./server');s.on('listening',()=>process.send(s.address().port))"],{cwd:path.resolve('.'),env:{...process.env,DATA_DIR:dir,HOST:'127.0.0.1',PORT:'0',MOBILE_SYNC_TOKEN:token},stdio:['ignore','pipe','pipe','ipc']});
+ t.after(async()=>{child.kill();await once(child,'exit');fs.rmSync(dir,{recursive:true,force:true});});
+ const [port]=await once(child,'message'),url='http://127.0.0.1:'+port+'/api/mobile/sync';
+ const request=(records,key=token)=>fetch(url,{method:records?'POST':'GET',headers:{'Content-Type':'application/json','X-Mobile-Sync-Token':key},body:records?JSON.stringify({version:1,records}):undefined});
+ assert.equal((await request(null,'')).status,401);assert.equal((await request(null,'incorrect-token')).status,401);
+ let snap=await(await request()).json();assert.equal(snap.version,1);assert.ok(snap.schema.length>=11);assert.ok(snap.records.every(r=>!['users','sessions'].includes(r.table)&&!Object.hasOwn(r.data,'created_by')));
+ assert.ok(!snap.schema.some(s=>/^CREATE TABLE sessions/i.test(s)));
+ const row=structuredClone(snap.records.find(r=>r.table==='projects'&&!r.deleted)),old=structuredClone(row);
+ row.data.name='http-newest';row.updated_at+=1000;assert.equal((await request([row])).status,200);
+ assert.equal((await request([old])).status,200);snap=await(await request()).json();assert.equal(snap.records.find(r=>r.uuid===row.uuid).data.name,'http-newest');
+ const before=JSON.stringify(snap.records);const valid={uuid:'b'.repeat(32),table:'projects',updated_at:Date.now()+2000,deleted:false,data:{name:'rollback-me',sort_order:1},refs:{}};
+ const bad={...valid,uuid:'c'.repeat(32),data:{name:'http-newest',sort_order:2}};
+ assert.equal((await request([valid,bad])).status,409);assert.equal(JSON.stringify((await(await request()).json()).records),before);
+ assert.equal((await request([{...valid,table:'users'}])).status,409);
+});

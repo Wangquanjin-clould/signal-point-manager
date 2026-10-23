@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+android {
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        release {
+            if (System.getenv('SPT_KEYSTORE')) {
+                storeFile file(System.getenv('SPT_KEYSTORE'))
+                storePassword System.getenv('SPT_STORE_PASSWORD')
+                keyAlias 'signalpoints'
+                keyPassword System.getenv('SPT_STORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { applicationIdSuffix '.test' }
+        release { if (System.getenv('SPT_KEYSTORE')) signingConfig signingConfigs.release }
+    }
+    namespace 'com.engineerservice.points'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+    defaultConfig {
+        applicationId 'com.engineerservice.points'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
