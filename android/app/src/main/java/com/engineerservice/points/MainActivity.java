@@ -31,7 +31,6 @@ public class MainActivity extends Activity {
         database.setForeignKeyConstraintsEnabled(true);
         LinearLayout layout=new LinearLayout(this); layout.setOrientation(1);
         layout.setPadding(0,28,0,16);
-        Button settings=new Button(this); settings.setText("同步设置 / 立即同步"); settings.setOnClickListener(v->configure()); layout.addView(settings);
         web=new WebView(this);
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
@@ -78,6 +77,7 @@ public class MainActivity extends Activity {
     }
     public class Bridge extends MobileStore {
         Bridge(){super(MainActivity.this.database,MainActivity.this.prefs,(id,result)->{if(web!=null&&!isDestroyed())web.evaluateJavascript("MobileRuntime.onHttpResult("+JSONObject.quote(id)+","+JSONObject.quote(result)+")",null);});}
+        @JavascriptInterface public void openSyncSettings(){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())configure();});}
         @JavascriptInterface public void saveFile(String base64,String name,String mime){
             pendingExport=android.util.Base64.decode(base64,android.util.Base64.DEFAULT);
             runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,name);startActivityForResult(i,91);});

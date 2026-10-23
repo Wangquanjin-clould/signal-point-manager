@@ -75,6 +75,7 @@ window.MobileRuntime={sync,db,onHttpResult(id,text){const r=requests.get(id);if(
 }};
 if(NativeStore.initialized()){MobileSync.install(db);installed=true;}
 document.addEventListener('DOMContentLoaded',()=>{
+ document.getElementById('mobileSyncNavBtn').addEventListener('click',()=>{closeDrawers();NativeStore.openSyncSettings();});
  const bar=document.createElement('div');bar.id='mobileSyncStatus';bar.style.cssText='padding:6px 14px;background:#e5f1ff;color:#173467;font-size:12px;position:fixed;bottom:0;left:0;right:0;z-index:9999;';bar.textContent=lastSync;document.body.append(bar);
  if(!NativeStore.initialized())sync();else setTimeout(sync,1500);
 });

@@ -18,6 +18,10 @@ fs.writeFileSync(path.join(out,'background-worker.js'),fs.readFileSync(path.join
 fs.writeFileSync(path.join(out,'background.html'),'<html><head><script src="/sync-core.js"></script><script src="/background-worker.js"></script></head></html>');
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8').replace('<script src="/app.js"></script>','<script src="/sync-core.js"></script><script src="/runtime.js"></script><script src="/app.js"></script>');
 html=html.replace('<head>','<head><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data:; connect-src \'self\'; frame-src \'none\'; object-src \'none\'; base-uri \'self\'">');
+html=html.replace('<div class="nav-foot">',`<button class="nav-item" id="mobileSyncNavBtn" title="同步设置 / 立即同步" aria-label="同步设置 / 立即同步">
+  <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0111.5-1L20 9M4 15l2.4 3A7 7 0 0018 17" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>同步设置 / 立即同步</span>
+</button><div class="nav-foot">`);
 fs.writeFileSync(path.join(out,'index.html'),html);
 let app=fs.readFileSync(path.join(out,'app.js'),'utf8').replace("if ('serviceWorker' in navigator)","if (!window.NativeStore && 'serviceWorker' in navigator)");
 fs.writeFileSync(path.join(out,'app.js'),app);
