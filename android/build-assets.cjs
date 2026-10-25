@@ -17,6 +17,8 @@ fs.copyFileSync(path.join(__dirname,'runtime/background.js'),path.join(out,'back
 fs.writeFileSync(path.join(out,'background-worker.js'),fs.readFileSync(path.join(__dirname,'runtime/prefix.js'),'utf8')+fs.readFileSync(path.join(__dirname,'runtime/background.js'),'utf8'));
 fs.writeFileSync(path.join(out,'background.html'),'<html><head><script src="/sync-core.js"></script><script src="/background-worker.js"></script></head></html>');
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8').replace('<script src="/app.js"></script>','<script src="/sync-core.js"></script><script src="/runtime.js"></script><script src="/app.js"></script>');
+for(const name of ['point-keyboard.js','point-keyboard.css'])fs.copyFileSync(path.join(__dirname,'runtime',name),path.join(out,name));
+html=html.replace('<script src="/app.js"></script>','<script src="/point-keyboard.js"></script><script src="/app.js"></script>').replace('</head>','<link rel="stylesheet" href="/point-keyboard.css"></head>');
 html=html.replace('<head>','<head><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data:; connect-src \'self\'; frame-src \'none\'; object-src \'none\'; base-uri \'self\'">');
 html=html.replace('<div class="nav-foot">',`<button class="nav-item" id="mobileSyncNavBtn" title="立即同步（长按设置）" aria-label="立即同步">
   <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0111.5-1L20 9M4 15l2.4 3A7 7 0 0018 17" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -24,5 +26,6 @@ html=html.replace('<div class="nav-foot">',`<button class="nav-item" id="mobileS
 </button><div class="nav-foot">`);
 fs.writeFileSync(path.join(out,'index.html'),html);
 let app=fs.readFileSync(path.join(out,'app.js'),'utf8').replace("if ('serviceWorker' in navigator)","if (!window.NativeStore && 'serviceWorker' in navigator)");
+app=app.replace('<input class="cell-edit" data-k="point_name"','<input class="cell-edit" data-k="point_name" readonly inputmode="none"');
 fs.writeFileSync(path.join(out,'app.js'),app);
 console.log('Bundled current website, routes and PLC rules for native SQLite');

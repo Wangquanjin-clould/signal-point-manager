@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
         });
         web=new WebView(this){
             @Override public android.view.inputmethod.InputConnection onCreateInputConnection(android.view.inputmethod.EditorInfo info){
+                if(pointKeyboardMode==3)return null;
                 android.view.inputmethod.InputConnection connection=super.onCreateInputConnection(info);
                 if(pointKeyboardMode==0||connection==null)return connection;
                 info.inputType=pointKeyboardMode==2?android.text.InputType.TYPE_CLASS_NUMBER:
@@ -109,9 +110,10 @@ public class MainActivity extends Activity {
         Bridge(){super(MainActivity.this.database,MainActivity.this.prefs,(id,result)->{if(web!=null&&!isDestroyed())web.evaluateJavascript("MobileRuntime.onHttpResult("+JSONObject.quote(id)+","+JSONObject.quote(result)+")",null);});}
         @JavascriptInterface public void openSyncSettings(){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())configure();});}
         @JavascriptInterface public void pointKeyboard(int mode){runOnUiThread(()->{
-            if(web==null||isDestroyed()||mode<0||mode>2||pointKeyboardMode==mode)return;
+            if(web==null||isDestroyed()||mode<0||mode>3||pointKeyboardMode==mode)return;
             pointKeyboardMode=mode;
             android.view.inputmethod.InputMethodManager keyboard=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            if(mode==3){keyboard.hideSoftInputFromWindow(web.getWindowToken(),0);keyboard.restartInput(web);enterFullscreen();return;}
             keyboard.restartInput(web);
             if(mode>0)web.postDelayed(()->{if(pointKeyboardMode==mode&&web.hasWindowFocus())keyboard.showSoftInput(web,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);},100);
         });}
@@ -138,5 +140,5 @@ public class MainActivity extends Activity {
     @Override protected void onResume(){super.onResume();visible=true;enterFullscreen();}
     @Override protected void onPause(){visible=false;super.onPause();}
     @Override protected void onDestroy(){visible=false;if(callback!=null)((android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(callback);if(web!=null){web.removeJavascriptInterface("NativeStore");web.destroy();}if(database!=null)database.close();super.onDestroy();}
-    @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("document.getElementById('backToOverview')?.click()",null);else super.onBackPressed();}
+    @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("if(window.PointKeyboard?.isOpen())PointKeyboard.close();else document.getElementById('backToOverview')?.click()",null);else super.onBackPressed();}
 }

@@ -104,14 +104,6 @@ document.addEventListener('DOMContentLoaded',()=>{
      toast('点位已删除','ok');
    }catch(error){button.disabled=false;toast(error.message,'err');}
  },true);
- const pointKeyboard=()=>{
-   const input=document.activeElement;
-   if(!input?.matches('input[data-k="point_name"]')){NativeStore.pointKeyboard(0);return;}
-   const numeric=/^[A-Za-z]/.test(input.value)&&(input.selectionStart??input.value.length)>0;
-   input.inputMode=numeric?'numeric':'text';input.autocapitalize='characters';input.spellcheck=false;
-   NativeStore.pointKeyboard(numeric?2:1);
- };
- for(const name of ['focusin','focusout','input','selectionchange'])document.addEventListener(name,pointKeyboard);
  const syncButton=document.getElementById('mobileSyncNavBtn');
  syncButton.addEventListener('click',()=>{closeDrawers();sync();});
  syncButton.addEventListener('contextmenu',event=>{event.preventDefault();closeDrawers();NativeStore.openSyncSettings();});

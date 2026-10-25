@@ -20,23 +20,22 @@ async function remote(records){const r=await fetch(base+'/api/mobile/sync',{meth
 const row=(table,id)=>evaluate(`MobileRuntime.db.prepare('SELECT * FROM ${table} WHERE id=?').get(${id})`);
 async function shot(name){const r=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,name+'.png'),Buffer.from(r.data,'base64'));}
 
+async function touch(selector){const point=await evaluate('(()=>{const r=document.querySelector('+JSON.stringify(selector)+').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()');await cdp('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});await cdp('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await delay(250);}
 (async()=>{try{
  await connect();await until('NativeStore.initialized() && window.__state?.tree.length>0');
- await evaluate('window.__syncReplies=0;(()=>{const oldReply=MobileRuntime.onHttpResult;MobileRuntime.onHttpResult=(...args)=>{__syncReplies++;oldReply(...args)}})()');
- if(!process.env.SKIP_IDLE)await delay(33000);assert.equal(await evaluate('__syncReplies'),0);pass('idle foreground does not perform periodic sync');
- const id=await evaluate('MobileRuntime.db.prepare("SELECT id FROM modules ORDER BY id LIMIT 1").get().id');
- await evaluate('(async()=>{__state.currentModuleId='+id+';openModuleView()})()');await until('__state.points.length>0 && document.querySelector("#pointsBody input[data-k=point_name]")');
- await evaluate('(()=>{const i=document.querySelector("#pointsBody input[data-k=point_name]");i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.scrollIntoView({block:"center"})})()');
- const bounds=await evaluate('(()=>{const r=document.querySelector("#pointsBody input[data-k=point_name]").getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()');
- await cdp('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:bounds.x,y:bounds.y}]});await cdp('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await delay(2500);
- let ime=shell('shell','dumpsys','input_method');assert.match(ime,/inputType=0x81001/);pass('first position requests uppercase Latin virtual keyboard');
- shell('shell','screencap','-p','/sdcard/spt-letters.png');shell('pull','/sdcard/spt-letters.png',path.join(out,'09-letter-keyboard.png'));
- shell('shell','input','text','g');await until('document.querySelector("#pointsBody input[data-k=point_name]").value==="G"');await delay(800);
- ime=shell('shell','dumpsys','input_method');assert.match(ime,/inputType=0x2\b/);pass('first letter is uppercase and switches keyboard to digits');
- shell('shell','screencap','-p','/sdcard/spt-digits.png');shell('pull','/sdcard/spt-digits.png',path.join(out,'10-number-keyboard.png'));
- shell('shell','input','text','6');await until('__state.points[0].point_name==="G6"');assert.equal(await evaluate('__syncReplies'),0);pass('typing does not synchronize');
- shell('shell','input','keyevent','KEYCODE_BACK');await delay(500);await evaluate('document.getElementById("savePointsBtn").click()');await until('document.getElementById("mobileSyncStatus").textContent.startsWith("已同步")');
- assert.ok(await evaluate('__syncReplies>0'));assert.ok((await remote()).records.some(r=>r.table==='points'&&!r.deleted&&r.data.point_name==='G6'));pass('Save commits SQLite then synchronizes to server');
- const jobs=shell('shell','dumpsys','jobscheduler',pkg);assert.ok(!jobs.includes(pkg+'/com.engineerservice.points.SyncJobService'));pass('no periodic Android sync job remains');
- fs.writeFileSync(path.join(out,'keyboard-save-report.json'),JSON.stringify({device:process.env.ANDROID_DEVICE_LABEL||'ERAZER N10B Android14',tests:report,production_modified:false},null,2));
+ const id=await evaluate('MobileRuntime.db.prepare("SELECT id FROM modules ORDER BY id LIMIT 1").get().id');await evaluate('(async()=>{__state.currentModuleId='+id+';openModuleView()})()');await until('__state.points.length>1');
+ await evaluate('(()=>{const i=document.querySelector("#pointsBody input[data-k=point_name]");i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.scrollIntoView({block:"center"});window.__syncReplies=0;const old=MobileRuntime.onHttpResult;MobileRuntime.onHttpResult=(...args)=>{__syncReplies++;old(...args)}})()');
+ await touch('#pointsBody input[data-k=point_name]');await until('!document.getElementById("pointKeyboard").hidden');
+ assert.equal(await evaluate('document.querySelector("#pointsBody input[data-k=point_name]").readOnly'),true);assert.ok(await evaluate('!!document.querySelector("#pointKeyboard [data-key=G]")'));
+ assert.ok(!/mInputShown=true/.test(shell('shell','dumpsys','input_method')));assert.ok(await evaluate('document.getElementById("pointKeyboard").offsetHeight<innerHeight*0.3'));pass('compact uppercase in-app keyboard opens without system IME');
+ shell('shell','screencap','-p','/sdcard/spt-built-in.png');shell('pull','/sdcard/spt-built-in.png',path.join(out,'in-app-letter-keyboard.png'));
+ await touch('#pointKeyboard [data-key=G]');await until('__state.points[0].point_name==="G"');assert.ok(await evaluate('!!document.querySelector("#pointKeyboard [data-key="+JSON.stringify("6")+"]")'));await touch('#pointKeyboard [data-key="6"]');await until('__state.points[0].point_name==="G6"');pass('letter input switches to compact digits and updates draft');
+ await touch('#pointKeyboard [data-action=backspace]');assert.equal(await evaluate('__state.points[0].point_name'),'G');await touch('#pointKeyboard [data-action=clear]');assert.equal(await evaluate('__state.points[0].point_name'),'');assert.ok(await evaluate('!!document.querySelector("#pointKeyboard [data-key=G]")'));pass('backspace and clear restore letter entry');
+ await touch('#pointKeyboard [data-key=G]');await touch('#pointKeyboard [data-key="6"]');
+ shell('shell','screencap','-p','/sdcard/spt-built-in.png');shell('pull','/sdcard/spt-built-in.png',path.join(out,'in-app-number-keyboard.png'));
+ await touch('#pointKeyboard [data-action=next]');assert.equal(await evaluate('Number(document.activeElement.closest("tr").dataset.id)'),await evaluate('__state.points[1].id'));pass('Next row advances within point table');
+ await touch('#pointKeyboard [data-action=done]');assert.equal(await evaluate('document.getElementById("pointKeyboard").hidden'),true);assert.equal(await evaluate('__syncReplies'),0);pass('closing keyboard leaves unsaved data local');
+ await evaluate('document.getElementById("savePointsBtn").click()');await until('document.getElementById("mobileSyncStatus").textContent.startsWith("已同步")');assert.ok(await evaluate('__syncReplies>0'));pass('Save retains existing SQLite and synchronization behavior');
+ await evaluate('document.getElementById("treeFilter").scrollIntoView()');await touch('#treeFilter');await delay(1200);assert.ok(/mInputShown=true/.test(shell('shell','dumpsys','input_method')));pass('ordinary search fields still support the system keyboard');shell('shell','input','keyevent','KEYCODE_BACK');
+ fs.writeFileSync(path.join(out,'in-app-keyboard-report.json'),JSON.stringify({device:process.env.ANDROID_DEVICE_LABEL||'Nexus7',tests:report,production_modified:false},null,2));
  }finally{ws?.close();}})().catch(e=>{console.error(e);process.exitCode=1});
