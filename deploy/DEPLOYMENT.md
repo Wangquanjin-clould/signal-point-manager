@@ -210,3 +210,13 @@ Excel 导出按每列最长内容计算工作表列宽，中文按双字符宽�
 将桌面排序改为按住行 180 毫秒后移动鼠标，避免表格原生拖放在输入控件附近不稳定；触屏仍使用长按拖动，键盘仍支持排序手柄的上下方向键。拖动结束自动保存顺序。Service Worker 缓存版本升至 `spt-v37`。
 
 发布镜像为 `signal-point-manager:20261015-5`，继续使用原数据库持久卷，升级前在线备份为 `/opt/signal-point-manager/data/backups/before-20261015-5.db`。线上 HTTPS 返回 200 且浏览器证书校验通过；新脚本、缓存版本、38 行信号配置及对应排序手柄均已核对。隔离数据库真实鼠标事件测试确认排序成功写入数据库。
+
+## 三语言切换（20261025-three-languages）
+
+发布镜像为 `signal-point-manager:20261025-three-languages`，源码位于 `/opt/signal-point-manager/releases/20261025-three-languages`。主页右上角新增中国、英国、埃及国旗，分别切换中文、英文及埃及阿拉伯语；选择保存在本机，阿拉伯语采用 RTL 布局，业务名称和 PLC 表达式保持原值。Service Worker 缓存升级为 `spt-v38`。
+
+沿用原数据库及移动端密钥；上线前备份位于 `/opt/signal-point-manager/data/backups/before-20261025-three-languages.db`，上线前后业务与账号内容哈希一致，数据库完整性校验通过。原容器保留为 `signal-point-manager-before-20261025-three-languages`。公网只读验证命令：`node deploy/verify-languages.cjs`。
+
+IP 直连入口：`https://107.173.154.48:10443/`。为 IP 单独签发受信任证书，SAN 为 `IP:107.173.154.48`；Nginx 新增 `/etc/nginx/conf.d/signal-point-manager-ip.conf` 作为 10443 默认入口。沿用 APP 已固定的公钥，私钥和 CSR 只保存在服务器 `/etc/signal-point-manager-ip-tls/`，不进入仓库。
+
+IP 证书采用短有效期；`signal-point-manager-ip-certificate.timer` 每日两次检查，剩余不足 3 天时由 `/usr/local/sbin/signal-point-manager-renew-ip-certificate` 申请新证书，校验 IP、证书链和密钥一致后重新加载 Nginx。续期使用独立 Certbot 5.5.0 环境 `/opt/signal-point-manager/certbot-ip`，HTTP-01 验证目录为 `/var/www/signal-point-manager-acme`；80 端口仅提供验证目录，其他路径返回 404。原域名配置保留。参考脚本：`deploy/enable-ip-tls.sh`、`deploy/renew-ip-certificate.sh`。
