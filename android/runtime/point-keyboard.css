@@ -5,14 +5,9 @@
 #pointKeyboardValue { font-family:monospace;color:#2563eb;margin-left:8px; }
 .point-keyboard-toolbar>div { display:flex;gap:5px;flex-wrap:wrap; }
 #pointKeyboard button { border:1px solid #b8c8dc;border-radius:6px;background:white;color:#173467;min-height:30px;font-size:15px;font-weight:600;padding:3px 9px; }
-#pointKeyboard button:active,#pointKeyboard button.selected { background:#2563eb;color:white; }
-.point-keyboard-row { display:flex;justify-content:center;gap:6px;margin-top:4px; }
-.point-keyboard-row button { flex:1;max-width:110px; }
+#pointKeyboard button:active { background:#2563eb;color:white; }
+.point-keyboard-combined-grid { display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px; }
+.point-keyboard-combined-grid button { min-width:0;min-height:34px!important;font-size:17px!important;padding:3px 0!important; }
 .point-keyboard-open .content { padding-bottom:calc(48px + var(--point-keyboard-height)); }
 #pointsBody input[data-k="point_name"] { scroll-margin-top:calc(var(--topbar-h) + 12px);scroll-margin-bottom:12px; }
-.point-keyboard-number-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px; }
-.point-keyboard-number-grid button { min-height:34px!important;font-size:20px!important; }
-.point-keyboard-number-grid [data-key="0"] { grid-column:2; }
-#pointKeyboard[data-mode="numbers"] .point-keyboard-toolbar>div { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%; }
-#pointKeyboard[data-mode="numbers"] .point-keyboard-toolbar button { padding:3px 5px;font-size:13px; }
-@media(max-width:650px) { #pointKeyboard button { padding:4px 6px;min-height:32px; }.point-keyboard-row { gap:3px; } }
+@media(max-width:650px) { #pointKeyboard button { padding:4px 6px;min-height:32px; }.point-keyboard-combined-grid { gap:4px; } }

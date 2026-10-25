@@ -1,14 +1,16 @@
 /* Compact point-entry keyboard. Values remain unsaved drafts until the user presses Save. */
 document.addEventListener('DOMContentLoaded',()=>{
   const selector='#pointsBody input[data-k="point_name"]';
-  let target=null,mode='letters',positionPending=false;
+  let target=null,positionPending=false;
   const panel=document.createElement('section');
   panel.id='pointKeyboard';panel.hidden=true;panel.setAttribute('aria-label','设备点位键盘');
   panel.innerHTML='<div class="point-keyboard-toolbar"><strong>设备点位 <span id="pointKeyboardValue"></span></strong><div>'+[
-    ['letters','ABC'],['numbers','123'],['backspace','退格'],['clear','清空'],['next','下一行'],['done','收起']
+    ['backspace','退格'],['clear','清空'],['next','下一行'],['done','收起']
   ].map(([action,label])=>`<button type="button" data-action="${action}">${label}</button>`).join('')+'</div></div><div id="pointKeyboardKeys"></div>';
   document.body.append(panel);
   const keys=panel.querySelector('#pointKeyboardKeys'),preview=panel.querySelector('#pointKeyboardValue');
+  // Match the combined ten-column layout in the Sailun PCR mobile operator app.
+  keys.innerHTML='<div class="point-keyboard-combined-grid">'+Array.from('1234567890QWERTYUIOPASDFGHJKLZXCVBNM-_').map(key=>`<button type="button" data-key="${key}">${key}</button>`).join('')+'</div>';
   function reveal(){
     target.scrollIntoView({block:'start',inline:'nearest'});
     requestAnimationFrame(()=>{
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(!allowScroll)return close();
       reveal();return;
     }
-    panel.style.width=Math.min(mode==='numbers'?300:580,width-margin*2)+'px';
+    panel.style.width=Math.min(500,width-margin*2)+'px';
     panel.style.maxHeight=Math.max(80,height-minTop-margin-rect.height-gap)+'px';
     const panelWidth=panel.offsetWidth,panelHeight=panel.offsetHeight;
     document.documentElement.style.setProperty('--point-keyboard-height',panelHeight+'px');
@@ -50,17 +52,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.documentElement.style.setProperty('--point-keyboard-height',panel.hidden?'0px':panel.offsetHeight+'px');
   }
   function render(){
-    panel.dataset.mode=mode;
-    const keyButton=key=>`<button type="button" data-key="${key}">${key}</button>`;
-    keys.innerHTML=mode==='numbers'?'<div class="point-keyboard-number-grid">'+Array.from('1234567890').map(keyButton).join('')+'</div>':
-      ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'].map(row=>'<div class="point-keyboard-row">'+Array.from(row).map(keyButton).join('')+'</div>').join('');
-    panel.querySelectorAll('[data-action="letters"],[data-action="numbers"]').forEach(button=>button.classList.toggle('selected',button.dataset.action===mode));
-    preview.textContent=target?.value||'先填字母，再填编号';reserve();position();
+    preview.textContent=target?.value||'字母、数字同屏输入';reserve();position();
   }
   function open(input){
     const different=target!==input;
     target=input;input.readOnly=true;input.inputMode='none';
-    mode=/^[A-Z]/i.test(input.value)?'numbers':'letters';
     panel.hidden=false;document.body.classList.add('point-keyboard-open');
     NativeStore.pointKeyboard(3);render();
     if(different)requestAnimationFrame(()=>{input.scrollIntoView({block:'nearest',inline:'nearest'});position();});
@@ -73,7 +69,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     target.value=value.toUpperCase().slice(0,target.maxLength>0?target.maxLength:32);
     target.setSelectionRange(Math.min(start,target.value.length),Math.min(start,target.value.length));
     target.dispatchEvent(new Event('input',{bubbles:true}));
-    mode=/^[A-Z]/.test(target.value)?'numbers':'letters';render();
+    render();
   }
   // Keep focus and the selection in the point field while pressing keyboard buttons.
   panel.addEventListener('pointerdown',event=>event.preventDefault());
@@ -81,7 +77,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     const button=event.target.closest('button');if(!button||!target)return;
     const action=button.dataset.action,start=target.selectionStart??target.value.length,end=target.selectionEnd??start;
     if(button.dataset.key){const key=button.dataset.key;return write(target.value.slice(0,start)+key+target.value.slice(end),start+1);}
-    if(action==='letters'||action==='numbers'){mode=action;return render();}
     if(action==='clear')return write('',0);
     if(action==='backspace'){const from=start===end?Math.max(0,start-1):start;return write(target.value.slice(0,from)+target.value.slice(end),from);}
     if(action==='next'){
@@ -96,7 +91,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('keydown',event=>{
     if(!target||document.activeElement!==target)return;
     if(event.key==='Escape'){event.preventDefault();return close();}
-    if(event.key==='Backspace'||/^[a-z0-9]$/i.test(event.key)){
+    if(event.key==='Backspace'||/^[a-z0-9_-]$/i.test(event.key)){
       event.preventDefault();panel.querySelector(event.key==='Backspace'?'[data-action="backspace"]':`[data-key="${event.key.toUpperCase()}"]`)?.click();
     }
   });
