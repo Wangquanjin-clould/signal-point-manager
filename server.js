@@ -603,8 +603,9 @@ route('POST', '/api/projects/:id/cabinets/reorder', async ({ req, res, params })
   if (ids.length !== current.length || current.some(c => !ids.includes(c.id))) return sendJson(res, 409, { error: '项目中的柜子已变化，请刷新后重新排序' });
   db.exec('BEGIN IMMEDIATE');
   try {
-    const insert = db.prepare('INSERT INTO project_cabinet_order(project_id,cabinet_id,sort_order) VALUES(?,?,?) ON CONFLICT(project_id,cabinet_id) DO UPDATE SET sort_order=excluded.sort_order');
-    ids.forEach((id, index) => insert.run(projectId, id, index));
+    const insert = db.prepare('INSERT INTO project_cabinet_order(project_id,cabinet_id,sort_order) VALUES(?,?,?)');
+    const update = db.prepare('UPDATE project_cabinet_order SET sort_order=? WHERE project_id=? AND cabinet_id=?');
+    ids.forEach((id, index) => {if(!update.run(index,projectId,id).changes)insert.run(projectId,id,index);});
     db.exec('COMMIT');
   } catch (err) { db.exec('ROLLBACK'); throw err; }
   sendJson(res, 200, { ok: true });

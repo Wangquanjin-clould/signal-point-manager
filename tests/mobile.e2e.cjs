@@ -8,7 +8,7 @@ const shell=(...args)=>execFileSync(adb,['-s',process.env.ANDROID_SERIAL||'emula
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 let ws,seq=0,waiters=new Map();
 async function connect(){
- let pid='';for(let i=0;i<60&&!pid;i++){try{pid=shell('shell','pidof',pkg).trim();}catch{}if(!pid)await delay(200);}if(!pid)throw Error('App process unavailable');shell('forward','tcp:9226','localabstract:webview_devtools_remote_'+pid);
+ let pid='';for(let i=0;i<60&&!pid;i++){try{pid=shell('shell','pidof',pkg).trim().split(/\s+/)[0];}catch{}if(!pid)await delay(200);}if(!pid)throw Error('App process unavailable');shell('forward','tcp:9226','localabstract:webview_devtools_remote_'+pid);
  for(let i=0;i<60;i++){try{const all=await(await fetch('http://127.0.0.1:9226/json')).json();const list=all.filter(x=>x.url.endsWith('/index.html'));if(list.length){ws=new WebSocket(list[0].webSocketDebuggerUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j;});ws.onmessage=e=>{const m=JSON.parse(e.data);if(waiters.has(m.id)){waiters.get(m.id)(m);waiters.delete(m.id);}};return;}}catch{}await delay(300);}
  throw Error('WebView unavailable');
 }
@@ -75,7 +75,7 @@ async function shot(name){const r=await cdp('Page.captureScreenshot',{format:'pn
   await local('/api/modules/'+mod.id,{},'DELETE');await evaluate('MobileRuntime.sync()');await until("document.getElementById('mobileSyncStatus').textContent.startsWith('已同步')");
   after=await remote();assert.ok(!after.records.some(r=>r.table==='modules'&&!r.deleted&&r.data.module_no===no));pass('module deletion and cascading point tombstones synchronize without resurrection');
   await shot('03-after-reconnect');
-  const jobs=shell('shell','dumpsys','jobscheduler',pkg);assert.ok(!jobs.includes('JOB #'));pass('periodic background synchronization is disabled');
+  const jobs=shell('shell','dumpsys','jobscheduler',pkg);assert.ok(!jobs.includes(pkg+'/com.engineerservice.points.SyncJobService'));pass('periodic background synchronization is disabled');
   fs.writeFileSync(path.join(out,'simulation-report.json'),JSON.stringify({android:real?'ERAZER N10B Android 14 real tablet':'35 x86_64 emulator',tested_at:new Date().toISOString(),production_modified:false,tests:report},null,2));
  } finally {if(!real){shell('shell','wm','size','reset');shell('shell','wm','density','reset');shell('shell','wm','user-rotation','free');}else{shell('reverse','tcp:8793','tcp:8793');}shell('shell','cmd','connectivity','airplane-mode','disable');shell('shell','svc','wifi','enable');shell('shell','svc','data','enable');ws?.close();}
 })().catch(e=>{console.error(e);fs.writeFileSync(path.join(out,'simulation-failure.json'),JSON.stringify({tests:report,error:e.stack},null,2));process.exitCode=1;});

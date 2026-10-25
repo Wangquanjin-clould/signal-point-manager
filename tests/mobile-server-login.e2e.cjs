@@ -8,7 +8,7 @@ const shell=(...args)=>execFileSync(adb,['-s',process.env.ANDROID_SERIAL||'emula
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 let ws,seq=0,waiters=new Map();
 async function connect(){
- let pid='';for(let i=0;i<60&&!pid;i++){try{pid=shell('shell','pidof',pkg).trim();}catch{}if(!pid)await delay(200);}if(!pid)throw Error('App process unavailable');shell('forward','tcp:9226','localabstract:webview_devtools_remote_'+pid);
+ let pid='';for(let i=0;i<60&&!pid;i++){try{pid=shell('shell','pidof',pkg).trim().split(/\s+/)[0];}catch{}if(!pid)await delay(200);}if(!pid)throw Error('App process unavailable');shell('forward','tcp:9226','localabstract:webview_devtools_remote_'+pid);
  for(let i=0;i<60;i++){try{const all=await(await fetch('http://127.0.0.1:9226/json')).json();const list=all.filter(x=>x.url.endsWith('/index.html'));if(list.length){ws=new WebSocket(list[0].webSocketDebuggerUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j;});ws.onmessage=e=>{const m=JSON.parse(e.data);if(waiters.has(m.id)){waiters.get(m.id)(m);waiters.delete(m.id);}};return;}}catch{}await delay(300);}
  throw Error('WebView unavailable');
 }
@@ -34,5 +34,5 @@ async function shot(name){const r=await cdp('Page.captureScreenshot',{format:'pn
  r=await local('/api/config/parts',{name:'must-not-create'});assert.equal(r.status,403);pass('ordinary server accounts cannot modify administrator configuration');
  r=await local('/api/auth/password',{oldPassword:'fixture-only-pass',newPassword:'fixture-only-updated'});assert.equal(r.status,200,JSON.stringify(r));await local('/api/auth/logout',{});
  r=await local('/api/auth/login',{username:account,password:'fixture-only-updated'});assert.equal(r.status,200);assert.equal(r.user.mustChangePwd,false);pass('server password change uses authenticated server session');
- fs.writeFileSync(path.join(out,'server-login-report.json'),JSON.stringify({device:'ERAZER N10B Android14',tests:report,production_modified:false},null,2));
+ fs.writeFileSync(path.join(out,'server-login-report.json'),JSON.stringify({device:process.env.ANDROID_DEVICE_LABEL||'ERAZER N10B Android14',tests:report,production_modified:false},null,2));
  }finally{shell('reverse','tcp:8793','tcp:8793');ws?.close();}})().catch(e=>{console.error(e);process.exitCode=1});

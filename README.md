@@ -214,4 +214,4 @@ node verify-ui.js       # 浏览器 UI：92 项（需 Edge/Chrome）
 
 ## 安卓离线应用
 
-Android 8.0+，本机 SQLite，首次下载与逐条双向同步。安装包、使用说明和真机测试见 [安卓说明](android/README.md)。VPS 同步地址： https://107.173.154.48:10443 。
+Android 7.0+，本机 SQLite，首次下载与逐条双向同步。安装包、使用说明和真机测试见 [安卓说明](android/README.md)。VPS 同步地址： https://107.173.154.48:10443 。

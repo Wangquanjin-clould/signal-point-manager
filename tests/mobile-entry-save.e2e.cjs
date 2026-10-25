@@ -8,7 +8,7 @@ const shell=(...args)=>execFileSync(adb,['-s',process.env.ANDROID_SERIAL||'emula
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 let ws,seq=0,waiters=new Map();
 async function connect(){
- let pid='';for(let i=0;i<60&&!pid;i++){try{pid=shell('shell','pidof',pkg).trim();}catch{}if(!pid)await delay(200);}if(!pid)throw Error('App process unavailable');shell('forward','tcp:9226','localabstract:webview_devtools_remote_'+pid);
+ let pid='';for(let i=0;i<60&&!pid;i++){try{pid=shell('shell','pidof',pkg).trim().split(/\s+/)[0];}catch{}if(!pid)await delay(200);}if(!pid)throw Error('App process unavailable');shell('forward','tcp:9226','localabstract:webview_devtools_remote_'+pid);
  for(let i=0;i<60;i++){try{const all=await(await fetch('http://127.0.0.1:9226/json')).json();const list=all.filter(x=>x.url.endsWith('/index.html'));if(list.length){ws=new WebSocket(list[0].webSocketDebuggerUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j;});ws.onmessage=e=>{const m=JSON.parse(e.data);if(waiters.has(m.id)){waiters.get(m.id)(m);waiters.delete(m.id);}};return;}}catch{}await delay(300);}
  throw Error('WebView unavailable');
 }
@@ -22,13 +22,13 @@ async function shot(name){const r=await cdp('Page.captureScreenshot',{format:'pn
 
 (async()=>{try{
  await connect();await until('NativeStore.initialized() && window.__state?.tree.length>0');
- await evaluate('window.__syncReplies=0;const oldReply=MobileRuntime.onHttpResult;MobileRuntime.onHttpResult=(...args)=>{__syncReplies++;oldReply(...args)}');
+ await evaluate('window.__syncReplies=0;(()=>{const oldReply=MobileRuntime.onHttpResult;MobileRuntime.onHttpResult=(...args)=>{__syncReplies++;oldReply(...args)}})()');
  if(!process.env.SKIP_IDLE)await delay(33000);assert.equal(await evaluate('__syncReplies'),0);pass('idle foreground does not perform periodic sync');
  const id=await evaluate('MobileRuntime.db.prepare("SELECT id FROM modules ORDER BY id LIMIT 1").get().id');
  await evaluate('(async()=>{__state.currentModuleId='+id+';openModuleView()})()');await until('__state.points.length>0 && document.querySelector("#pointsBody input[data-k=point_name]")');
- await evaluate('(()=>{const i=document.querySelector("#pointsBody input[data-k=point_name]");i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();i.setSelectionRange(0,0)})()');
+ await evaluate('(()=>{const i=document.querySelector("#pointsBody input[data-k=point_name]");i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.scrollIntoView({block:"center"})})()');
  const bounds=await evaluate('(()=>{const r=document.querySelector("#pointsBody input[data-k=point_name]").getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()');
- await delay(2500);
+ await cdp('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:bounds.x,y:bounds.y}]});await cdp('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await delay(2500);
  let ime=shell('shell','dumpsys','input_method');assert.match(ime,/inputType=0x81001/);pass('first position requests uppercase Latin virtual keyboard');
  shell('shell','screencap','-p','/sdcard/spt-letters.png');shell('pull','/sdcard/spt-letters.png',path.join(out,'09-letter-keyboard.png'));
  shell('shell','input','text','g');await until('document.querySelector("#pointsBody input[data-k=point_name]").value==="G"');await delay(800);
@@ -37,6 +37,6 @@ async function shot(name){const r=await cdp('Page.captureScreenshot',{format:'pn
  shell('shell','input','text','6');await until('__state.points[0].point_name==="G6"');assert.equal(await evaluate('__syncReplies'),0);pass('typing does not synchronize');
  shell('shell','input','keyevent','KEYCODE_BACK');await delay(500);await evaluate('document.getElementById("savePointsBtn").click()');await until('document.getElementById("mobileSyncStatus").textContent.startsWith("已同步")');
  assert.ok(await evaluate('__syncReplies>0'));assert.ok((await remote()).records.some(r=>r.table==='points'&&!r.deleted&&r.data.point_name==='G6'));pass('Save commits SQLite then synchronizes to server');
- const jobs=shell('shell','dumpsys','jobscheduler',pkg);assert.ok(!jobs.includes('JOB #'));pass('no periodic Android sync job remains');
- fs.writeFileSync(path.join(out,'keyboard-save-report.json'),JSON.stringify({device:'ERAZER N10B Android14',tests:report,production_modified:false},null,2));
+ const jobs=shell('shell','dumpsys','jobscheduler',pkg);assert.ok(!jobs.includes(pkg+'/com.engineerservice.points.SyncJobService'));pass('no periodic Android sync job remains');
+ fs.writeFileSync(path.join(out,'keyboard-save-report.json'),JSON.stringify({device:process.env.ANDROID_DEVICE_LABEL||'ERAZER N10B Android14',tests:report,production_modified:false},null,2));
  }finally{ws?.close();}})().catch(e=>{console.error(e);process.exitCode=1});

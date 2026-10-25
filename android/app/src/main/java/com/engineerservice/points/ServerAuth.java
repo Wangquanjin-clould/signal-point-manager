@@ -44,18 +44,20 @@ final class ServerAuth {
                 JSONObject cached=new JSONObject(prefs.getString("server_login_cache","{}"));
                 if(!prefs.getString("url","").equals(cached.optString("url"))||cached.optJSONObject("user")==null||!username.equals(cached.getJSONObject("user").optString("username")))throw new IOException("离线登录需先联网成功验证该服务器账号");
                 byte[] salt=Base64.decode(cached.getString("salt"),Base64.NO_WRAP);
-                if(!MessageDigest.isEqual(verifier(password,salt),Base64.decode(cached.getString("hash"),Base64.NO_WRAP)))throw new IOException("用户名或密码错误");
+                if(!MessageDigest.isEqual(verifier(password,salt,cached.optString("algorithm","PBKDF2WithHmacSHA256")),Base64.decode(cached.getString("hash"),Base64.NO_WRAP)))throw new IOException("用户名或密码错误");
                 cookie="";return new JSONObject().put("user",cached.getJSONObject("user")).put("offline",true).toString();
             }
         }catch(Exception e){try{return new JSONObject().put("__error",e.getMessage()==null?"服务器登录失败":e.getMessage()).toString();}catch(Exception ignored){return "{\"__error\":\"服务器登录失败\"}";}}
     }
-    private byte[] verifier(String password,byte[] salt)throws Exception{
+    private byte[] verifier(String password,byte[] salt,String algorithm)throws Exception{
         PBEKeySpec spec=new PBEKeySpec(password.toCharArray(),salt,120000,256);
-        try{return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();}finally{spec.clearPassword();}
+        try{return SecretKeyFactory.getInstance(algorithm).generateSecret(spec).getEncoded();}finally{spec.clearPassword();}
     }
     private void cache(JSONObject user,String password)throws Exception{
         byte[] salt=new byte[16];new SecureRandom().nextBytes(salt);
-        JSONObject cache=new JSONObject().put("url",prefs.getString("url","")).put("user",user).put("salt",Base64.encodeToString(salt,Base64.NO_WRAP)).put("hash",Base64.encodeToString(verifier(password,salt),Base64.NO_WRAP));
+        String algorithm="PBKDF2WithHmacSHA256";
+        try{SecretKeyFactory.getInstance(algorithm);}catch(NoSuchAlgorithmException unavailable){algorithm="PBKDF2WithHmacSHA1";}
+        JSONObject cache=new JSONObject().put("url",prefs.getString("url","")).put("user",user).put("algorithm",algorithm).put("salt",Base64.encodeToString(salt,Base64.NO_WRAP)).put("hash",Base64.encodeToString(verifier(password,salt,algorithm),Base64.NO_WRAP));
         prefs.edit().putString("server_login_cache",cache.toString()).apply();
     }
     private JSONObject request(String path,JSONObject body)throws Exception{

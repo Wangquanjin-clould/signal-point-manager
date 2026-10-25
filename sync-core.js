@@ -64,7 +64,8 @@
       db.exec('UPDATE mobile_sync_control SET importing=1 WHERE id=1');
       for (const {r,old} of chosen.filter(x=>x.r.deleted).sort((a,b)=>tables.indexOf(b.r.table)-tables.indexOf(a.r.table))) {
         if(old && !old.deleted) db.prepare(`DELETE FROM ${q(r.table)} WHERE rowid=?`).run(old.row_id);
-        db.prepare('INSERT INTO mobile_sync_records(uuid,table_name,row_id,updated_at,deleted) VALUES(?,?,?,?,1) ON CONFLICT(uuid) DO UPDATE SET updated_at=excluded.updated_at,deleted=1').run(r.uuid,r.table,old?.row_id || -1,r.updated_at);
+        if(old)db.prepare('UPDATE mobile_sync_records SET updated_at=?,deleted=1 WHERE uuid=?').run(r.updated_at,r.uuid);
+        else db.prepare('INSERT INTO mobile_sync_records(uuid,table_name,row_id,updated_at,deleted) VALUES(?,?,?,?,1)').run(r.uuid,r.table,-1,r.updated_at);
       }
       const deletedAt=Math.max(0,...chosen.filter(x=>x.r.deleted).map(x=>x.r.updated_at));
       // A parent deletion also tombstones descendants removed by SQLite cascades.
@@ -88,7 +89,8 @@
           db.prepare('UPDATE mobile_sync_records SET updated_at=? WHERE uuid=?').run(r.updated_at,r.uuid);
         } else {
           const result=db.prepare(`INSERT INTO ${q(r.table)} (${keys.map(q).join(',')}) VALUES(${keys.map(()=>'?').join(',')})`).run(...values);
-          db.prepare('INSERT INTO mobile_sync_records VALUES(?,?,?,?,0) ON CONFLICT(uuid) DO UPDATE SET row_id=excluded.row_id,updated_at=excluded.updated_at,deleted=0').run(r.uuid,r.table,Number(result.lastInsertRowid),r.updated_at);
+          if(old)db.prepare('UPDATE mobile_sync_records SET row_id=?,updated_at=?,deleted=0 WHERE uuid=?').run(Number(result.lastInsertRowid),r.updated_at,r.uuid);
+          else db.prepare('INSERT INTO mobile_sync_records VALUES(?,?,?,?,0)').run(r.uuid,r.table,Number(result.lastInsertRowid),r.updated_at);
         }
       }
       if(db.prepare('PRAGMA foreign_key_check').all().length) throw new Error('Foreign key validation failed');
