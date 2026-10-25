@@ -274,11 +274,12 @@ function listModules(projectId) {
 }
 
 /** 组装点位行：传感器类型 / 编号 由数据库配置实时推导（复刻 Excel 公式） */
-function listPoints({ projectId, moduleId } = {}) {
+function listPoints({ projectId, moduleId, cabinetId } = {}) {
   const where = [];
   const args = [];
   if (moduleId) { where.push('pt.module_id = ?'); args.push(moduleId); }
   else if (projectId) { where.push('pt.project_id = ?'); args.push(projectId); }
+  if(cabinetId){where.push('m.cabinet_id = ?');args.push(cabinetId);}
   const sql = `
     SELECT pt.*, st.name AS signal_name, st.abbr AS signal_abbr,
            st.sensor_type AS signal_sensor, st.no_sensor AS st_no_sensor,
@@ -938,7 +939,9 @@ route('PUT', '/api/modules/:id/points', async ({ req, res, params, user }) => {
 route('GET', '/api/points', async ({ res, url }) => {
   const pid = intOrNull(url.searchParams.get('project_id'));
   const mid = intOrNull(url.searchParams.get('module_id'));
-  sendJson(res, 200, { items: listPoints({ projectId: pid, moduleId: mid }) });
+  const cid = intOrNull(url.searchParams.get('cabinet_id'));
+  if(url.searchParams.has('cabinet_id')&&(!cid||cid<1||!pid||pid<1))return sendJson(res,400,{error:'查看柜内通道需指定有效项目和控制柜'});
+  sendJson(res, 200, { items: listPoints({ projectId: pid, moduleId: mid, cabinetId: cid }) });
 }, { public: true });
 
 route('POST', '/api/points', async ({ req, res }) => {

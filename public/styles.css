@@ -382,6 +382,13 @@ body.nav-open .nav-backdrop { opacity: 1; visibility: visible; }
 .module-list-row.mine td:first-child { box-shadow: inset 3px 0 #3b82f6; }
 .module-list-progress { width: 72px; height: 5px; display: inline-flex; vertical-align: middle; margin: 0 7px 0 0; }
 .module-list-actions { display: flex; gap: 6px; align-items: center; }
+.cabinet-channel-panel { margin-top:22px;min-width:0; }
+.cabinet-channel-panel h3 { margin:0 0 6px;font-size:16px; }
+.cabinet-channel-panel .page-desc { margin-bottom:12px; }
+.cabinet-channel-wrap { max-height:560px; }
+.cabinet-channel-table { min-width:1250px; }
+.cabinet-channel-table th { position:sticky;top:0;z-index:1; }
+.cabinet-channel-module-start td { border-top:2px solid var(--border-strong); }
 .mod-card.mine { border-color: #bfdbfe; }
 .mod-card.mine .mod-no::after {
   content: '我建的'; font-size: 10px; font-weight: 700;

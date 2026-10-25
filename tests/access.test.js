@@ -79,6 +79,16 @@ test('免登录现场业务与管理员配置权限', async () => {
       const point = (await request(`/api/points?module_id=${fixture.data.id}`)).data.items[0];
       await request(`/api/points/${point.id}`, 'PATCH', { point_name, part: fieldPart.param });
     }
+    const cabinetChannels=await request('/api/points?project_id='+config.projects[0].id+'&cabinet_id='+config.cabinets[0].id);
+    assert.equal(cabinetChannels.status,200);
+    assert.equal(cabinetChannels.data.items.length,model.channel_count*2);
+    assert.ok(cabinetChannels.data.items.every(row=>exportModules.slice(0,2).includes(row.module_id)));
+    assert.ok(cabinetChannels.data.items.some(row=>row.point_name==='EXPORT_A'));
+    assert.ok(cabinetChannels.data.items.some(row=>row.point_name==='EXPORT_A2'));
+    assert.ok(cabinetChannels.data.items.some(row=>!row.point_name));
+    assert.ok(cabinetChannels.data.items.every(row=>typeof row.plc_expression==='string'));
+    assert.equal((await request('/api/points?cabinet_id='+config.cabinets[0].id)).status,400);
+    assert.equal((await request('/api/points?project_id='+config.projects[0].id+'&cabinet_id=invalid')).status,400);
     const projectWorkbookResponse = await request(`/api/export?project_id=${config.projects[0].id}`);
     const treeBeforeCabinetSort = (await request('/api/tree')).data.projects;
     const cabinetIds = treeBeforeCabinetSort.find(p => p.id === config.projects[0].id).cabinets.map(c => c.id);
