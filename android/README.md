@@ -1,6 +1,6 @@
 # Android 离线版
 
-正式安装包为 `output/apk/SignalPointManager-1.0.13-Nexus7.apk`。支持 Android 7.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
+正式安装包为 `output/apk/SignalPointManager-1.0.15-Nexus7.apk`。支持 Android 7.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
 
 ## 首次使用
 
