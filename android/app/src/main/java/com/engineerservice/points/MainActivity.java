@@ -92,22 +92,33 @@ public class MainActivity extends Activity {
         if(prefs.getString("token","").isEmpty())new Handler(Looper.getMainLooper()).postDelayed(this::configure,900);
     }
     WebResourceResponse denied(){return new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.emptyMap(),new ByteArrayInputStream(new byte[0]));}
+    String tr(String source) {
+        String language=prefs.getString("language","zh-CN");
+        if(language.equals("zh-CN"))return source;
+        try(InputStream stream=getAssets().open("web/native-translations.json")){
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int count;
+            while((count=stream.read(buffer))!=-1)bytes.write(buffer,0,count);
+            JSONArray values=new JSONObject(new String(bytes.toByteArray(),StandardCharsets.UTF_8)).optJSONArray(source);
+            return values==null?source:values.getString(language.equals("ar-EG")?1:0);
+        }catch(Exception ignored){return source;}
+    }
     void configure() {
-        LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(30,8,30,8);
-        EditText url=new EditText(this);url.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);url.setHint("VPS HTTPS 地址");url.setText(prefs.getString("url","https://107.173.154.48:10443"));box.addView(url);
-        EditText token=new EditText(this);token.setHint("移动端同步密钥");token.setInputType(129);token.setText(prefs.getString("token",""));box.addView(token);
-        new AlertDialog.Builder(this).setTitle("首次下载 / 同步设置").setView(box).setMessage("数据库保存在手机。首次下载需联网，之后可离线使用。基础配置使用服务器管理员账号，联网登录成功后可离线登录。")
-          .setNegativeButton("取消",null).setPositiveButton("保存并同步",(d,w)->{
+        LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(30,8,30,8);box.setLayoutDirection(prefs.getString("language","zh-CN").equals("ar-EG")?android.view.View.LAYOUT_DIRECTION_RTL:android.view.View.LAYOUT_DIRECTION_LTR);
+        EditText url=new EditText(this);url.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);url.setHint(tr("VPS HTTPS 地址"));url.setText(prefs.getString("url","https://107.173.154.48:10443"));box.addView(url);
+        EditText token=new EditText(this);token.setHint(tr("移动端同步密钥"));token.setInputType(129);token.setText(prefs.getString("token",""));box.addView(token);
+        new AlertDialog.Builder(this).setTitle(tr("首次下载 / 同步设置")).setView(box).setMessage(tr("数据库保存在手机。首次下载需联网，之后可离线使用。基础配置使用服务器管理员账号，联网登录成功后可离线登录。"))
+          .setNegativeButton(tr("取消"),null).setPositiveButton(tr("保存并同步"),(d,w)->{
               String base=url.getText().toString().trim().replaceAll("/+$","");
               boolean https=base.startsWith("https://") && Uri.parse(base).getHost()!=null;
               boolean test=BuildConfig.DEBUG && (base.matches("http://10\\.0\\.2\\.2:\\d+")||base.matches("http://127\\.0\\.0\\.1:\\d+"));
-              if((!https&&!test)||token.length()<32){Toast.makeText(this,"请填写有效 HTTPS 地址和至少32位同步密钥",Toast.LENGTH_LONG).show();return;}
+              if((!https&&!test)||token.length()<32){Toast.makeText(this,tr("请填写有效 HTTPS 地址和至少32位同步密钥"),Toast.LENGTH_LONG).show();return;}
               prefs.edit().putString("url",base).putString("token",token.getText().toString()).apply();
               web.evaluateJavascript("MobileRuntime.sync()",null);
           }).show();
     }
     public class Bridge extends MobileStore {
         Bridge(){super(MainActivity.this.database,MainActivity.this.prefs,(id,result)->{if(web!=null&&!isDestroyed())web.evaluateJavascript("MobileRuntime.onHttpResult("+JSONObject.quote(id)+","+JSONObject.quote(result)+")",null);});}
+        @JavascriptInterface public void setLanguage(String language){if(language.equals("zh-CN")||language.equals("en")||language.equals("ar-EG"))prefs.edit().putString("language",language).apply();}
         @JavascriptInterface public void openSyncSettings(){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())configure();});}
         @JavascriptInterface public void pointKeyboard(int mode){runOnUiThread(()->{
             if(web==null||isDestroyed()||mode<0||mode>3||pointKeyboardMode==mode)return;
@@ -122,7 +133,7 @@ public class MainActivity extends Activity {
             runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,name);startActivityForResult(i,91);});
         }
     }
-    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==91&&result==RESULT_OK&&data!=null&&pendingExport!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(pendingExport);Toast.makeText(this,"导出完成",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"导出失败",Toast.LENGTH_LONG).show();}}pendingExport=null;}
+    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==91&&result==RESULT_OK&&data!=null&&pendingExport!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(pendingExport);Toast.makeText(this,tr("导出完成"),Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,tr("导出失败"),Toast.LENGTH_LONG).show();}}pendingExport=null;}
     void enterFullscreen(){
         if(Build.VERSION.SDK_INT>=30){
             getWindow().setDecorFitsSystemWindows(false);

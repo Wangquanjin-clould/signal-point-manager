@@ -61,6 +61,11 @@
       </div>
     </div>
     <div class="topbar-right">
+      <div class="language-switch" role="group" aria-label="Language / 语言 / اللغة" translate="no">
+        <button type="button" data-language="zh-CN" title="中文" aria-label="中文" aria-pressed="true"><img src="/icons/flag-cn.svg" alt=""> <span>中文</span></button>
+        <button type="button" data-language="en" title="English" aria-label="English" aria-pressed="false"><img src="/icons/flag-gb.svg" alt=""> <span>EN</span></button>
+        <button type="button" data-language="ar-EG" title="العربية (مصر)" aria-label="العربية (مصر)" aria-pressed="false"><img src="/icons/flag-eg.svg" alt=""> <span lang="ar-EG">عربي</span></button>
+      </div>
       <button class="btn btn-ghost btn-sm" id="installBtn" hidden>安装到手机</button>
       <div class="user-chip" id="userChip" title="">
         <span class="avatar" id="userAvatar">?</span>
@@ -437,6 +442,7 @@
 
 <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
+<script src="/i18n.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

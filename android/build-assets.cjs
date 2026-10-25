@@ -3,6 +3,13 @@ const fs=require('node:fs');
 const path=require('node:path');
 const out=path.join(__dirname,'app/src/main/assets/web');
 fs.mkdirSync(out,{recursive:true});fs.cpSync(path.join(__dirname,'../public'),out,{recursive:true});
+// Reuse the web UI dictionary for Android's native settings and export dialogs.
+const localeSource=fs.readFileSync(path.join(out,'i18n.js'),'utf8');
+const localeStart=localeSource.indexOf('const messages = ')+17;
+const localeEnd=localeSource.indexOf(';\n  // Anchored',localeStart);
+if(localeStart<17||localeEnd<localeStart)throw Error('Missing locale dictionary');
+fs.writeFileSync(path.join(out,'native-translations.json'),JSON.stringify(require('node:vm').runInNewContext('('+localeSource.slice(localeStart,localeEnd)+')')));
+
 const server=fs.readFileSync(path.join(__dirname,'../server.js'),'utf8');
 const rules=fs.readFileSync(path.join(__dirname,'../db.js'),'utf8');
 const between=(s,start,end)=>{const a=s.indexOf(start),b=s.indexOf(end,a);if(a<0||b<0)throw Error('Missing source boundary '+start);return s.slice(a,b);};

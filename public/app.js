@@ -258,7 +258,7 @@ function openFormModal({ title, fields, confirmText = '确定', onConfirm }) {
         <span>${esc(f.label)}${f.required ? ' <i>*</i>' : ''}</span>
         ${f.type === 'select'
           ? `<select data-f="${f.key}">${f.options.map((o) =>
-              `<option value="${esc(o.value)}"${o.selected ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select>`
+              `<option value="${esc(o.value)}"${f.key==='role'?' data-ui-label':''}${o.selected ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select>`
           : f.type === 'switch'
             ? `<span class="switch"><input type="checkbox" data-f="${f.key}"${f.checked ? ' checked' : ''}><span></span></span>`
             : `<input type="${f.type || 'text'}" data-f="${f.key}" value="${esc(f.value ?? '')}"
@@ -319,6 +319,8 @@ function openFormModal({ title, fields, confirmText = '确定', onConfirm }) {
 /* ------------------------------------------------------------------ */
 function updateUserUI() {
   const u = state.user;
+  $('#userName').toggleAttribute('data-guest', !u);
+  $('#userAvatar').toggleAttribute('data-guest', !u);
   $('#userName').textContent = u?.username || '访客';
   $('#userAvatar').textContent = u ? u.username.slice(0, 1) : '访';
   const roleEl = $('#userRole');
@@ -643,6 +645,7 @@ function renderOverview() {
   const mods = cabinets.flatMap((c) => c.modules.map((m) => ({ ...m, cabinet_name: c.name })));
   state.modules = mods;
   $('#overviewTitle').textContent = cabinet ? `${project.name} / ${cabinet.name}` : project ? project.name : '项目总览';
+  $('#overviewTitle').toggleAttribute('data-business-title', Boolean(project));
   $('#overviewDesc').textContent = cabinet ? '选择模块，编辑通道点位表' : project ? '选择控制柜，查看柜内模块总览' : '选择项目，查看项目中的控制柜总览';
   $('#overviewBackBtn').hidden = !project;
   $('#overviewExportBtn').hidden = !project;
@@ -693,7 +696,7 @@ function renderOverview() {
       const spare = list => list.reduce((sum, m) => sum + Math.max(0,
         Number(m.channel_count || 0) - Number(m.configured_point_count || 0)), 0);
       return `<div class="mod-card" ${project ? `data-cabinet-overview="${entry.id}" data-project="${project.id}"` : `data-project-overview="${entry.id}"`}>
-        <div class="mod-card-top"><div class="mod-no">${project ? '控制柜 ' : ''}${esc(entry.name)}</div><span class="mod-badge ${points && !unfilled ? 'done' : ''}">${pct}% 已配置</span></div>
+        <div class="mod-card-top"><div class="mod-no">${project ? '控制柜 ' : ''}<span translate="no">${esc(entry.name)}</span></div><span class="mod-badge ${points && !unfilled ? 'done' : ''}">${pct}% 已配置</span></div>
         <div class="mod-card-meta">
           ${project ? '' : `<div class="meta-row"><span class="k">控制柜</span><span class="v">${entry.cabinets.length} 个</span></div>`}
           ${project ? `<div class="meta-row"><span class="k">DI模块 / DO模块</span><span class="v">${diModules.length} 个 / ${doModules.length} 个</span></div>
@@ -982,10 +985,10 @@ function renderPoints() {
       <td data-label="信号类型">
         <div class="signal-choice">
           <select class="cell-edit" data-k="signal_type_id" aria-label="信号类型" title="${esc(signalChoiceLabel(r.part, r.signal_type_id))}"${signalsForPart(r.part).length ? '' : ' disabled'}>${sigOptions}</select>
-          <span class="signal-choice-label" aria-hidden="true">${esc(signalChoiceLabel(r.part, r.signal_type_id))}</span>
+          <span class="signal-choice-label" translate="${signalsForPart(r.part).some(s=>s.id===r.signal_type_id)?'no':'yes'}" aria-hidden="true">${esc(signalChoiceLabel(r.part, r.signal_type_id))}</span>
         </div>
       </td>
-      <td data-label="传感器类型">
+      <td class="cell-sensor" data-label="传感器类型">
         <div class="cell-auto">${esc(r.sensor_type || '—')}</div>
       </td>
       <td data-label="编号">
@@ -1117,10 +1120,11 @@ function paintRow(tr, row) {
     signalSelect.innerHTML = signalOptions(row.part, row.signal_type_id);
     signalSelect.disabled = !signalsForPart(row.part).length;
     signalSelect.title = signalChoiceLabel(row.part, row.signal_type_id);
+    tr.querySelector('.signal-choice-label').setAttribute('translate', signalsForPart(row.part).some(s=>s.id===row.signal_type_id)?'no':'yes');
     tr.querySelector('.signal-choice-label').textContent = signalChoiceLabel(row.part, row.signal_type_id);
   }
-  const seqTd = tr.querySelector('[data-label="序号"]');
-  const sensorBox = tr.querySelector('[data-label="传感器类型"] .cell-auto');
+  const seqTd = tr.querySelector('.cell-seq');
+  const sensorBox = tr.querySelector('.cell-sensor .cell-auto');
   const codeBox = tr.querySelector('.cell-code');
   const plcBox = tr.querySelector('.cell-plc-expression');
   if (plcBox) {
@@ -1151,7 +1155,7 @@ function refreshSeqAndStats() {
   });
   $$('#pointsBody tr').forEach((tr) => {
     const p = state.points.find((x) => x.id === Number(tr.dataset.id));
-    const td = tr.querySelector('[data-label="序号"]');
+    const td = tr.querySelector('.cell-seq');
     if (p && td) td.textContent = p.seq || '';
   });
   renderStats();

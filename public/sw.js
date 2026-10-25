@@ -1,6 +1,6 @@
 /* Service Worker —— 离线壳缓存 */
-const CACHE = 'spt-v37';
-const ASSETS = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg'];
+const CACHE = 'spt-v38';
+const ASSETS = ['/', '/index.html', '/styles.css', '/app.js', '/i18n.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/flag-cn.svg', '/icons/flag-gb.svg', '/icons/flag-eg.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

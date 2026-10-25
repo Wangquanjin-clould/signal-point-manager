@@ -7,6 +7,8 @@
 #pointKeyboard button { border:1px solid #b8c8dc;border-radius:6px;background:white;color:#173467;min-height:30px;font-size:15px;font-weight:600;padding:3px 9px; }
 #pointKeyboard button:active { background:#2563eb;color:white; }
 .point-keyboard-combined-grid { display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px; }
+/* Equipment identifiers keep the same key order in Arabic. */
+#pointKeyboardKeys,#pointKeyboardValue { direction:ltr;unicode-bidi:isolate; }
 .point-keyboard-combined-grid button { min-width:0;min-height:34px!important;font-size:17px!important;padding:3px 0!important; }
 .point-keyboard-open .content { padding-bottom:calc(48px + var(--point-keyboard-height)); }
 #pointsBody input[data-k="point_name"] { scroll-margin-top:calc(var(--topbar-h) + 12px);scroll-margin-bottom:12px; }
