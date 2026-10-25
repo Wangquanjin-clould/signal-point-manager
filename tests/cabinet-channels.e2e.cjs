@@ -16,7 +16,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.goto(base);await page.waitForFunction('window.__state?.tree.length>0');await page.evaluate(([p,c])=>selectCabinet(p,c),[project.id,cabinet.id]);
   await page.waitForFunction(n=>document.querySelectorAll('#cabinetChannelsBody tr').length===n,model.channel_count*2);
   assert.equal(await page.locator('#cabinetChannels').isVisible(),true);assert.ok((await page.locator('#cabinetChannelsBody').innerText()).includes('CABINET_A_ONLY'));
-  assert.ok((await page.locator('#cabinetChannelsBody').innerText()).includes('备用'));
+  assert.ok((await page.locator('#cabinetChannelsStatus').innerText()).includes('备用'));
   const moduleBox=await page.locator('#moduleCards').boundingBox(),channelBox=await page.locator('#cabinetChannels').boundingBox();assert.ok(channelBox.y>=moduleBox.y+moduleBox.height);
   assert.ok((await page.locator('#cabinetChannels thead').innerText()).includes('PLC点位表达式'));
   await page.locator('#cabinetChannels').scrollIntoViewIfNeeded();await page.screenshot({path:'output/android-tests/cabinet-channels-desktop.png'});

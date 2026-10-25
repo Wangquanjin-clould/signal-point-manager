@@ -386,7 +386,8 @@ body.nav-open .nav-backdrop { opacity: 1; visibility: visible; }
 .cabinet-channel-panel h3 { margin:0 0 6px;font-size:16px; }
 .cabinet-channel-panel .page-desc { margin-bottom:12px; }
 .cabinet-channel-wrap { max-height:560px; }
-.cabinet-channel-table { min-width:1250px; }
+.cabinet-channel-table { min-width:0;table-layout:auto; }
+.cabinet-channel-table th:nth-child(-n+5),.cabinet-channel-table td:nth-child(-n+5) { width:1%;padding-left:6px;padding-right:6px;white-space:nowrap; }
 .cabinet-channel-table th { position:sticky;top:0;z-index:1; }
 .cabinet-channel-module-start td { border-top:2px solid var(--border-strong); }
 .mod-card.mine { border-color: #bfdbfe; }

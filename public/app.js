@@ -623,7 +623,7 @@ async function loadCabinetChannels(projectId,cabinetId,modules,request){
       const start=previous!==null&&previous!==row.module_id;previous=row.module_id;
       const part=state.config?.parts.find(item=>item.param===row.part)?.name||row.part||'—';
       const channel=String(row.plc_point||'').match(/\.(\d+)$/)?.[1]??row.sort_order;
-      return `<tr${start?' class="cabinet-channel-module-start"':''}><td>${index+1}</td><td>${esc(module.module_no)}</td><td>${esc(module.module_type_name)}</td><td>${esc(channel)}</td><td>${esc(part)}</td><td>${esc(row.point_name||'—')}</td><td>${esc(row.signal_name||'—')}</td><td>${esc(row.sensor_type||'—')}</td><td class="mono">${esc(row.code)}</td><td class="mono">${esc(row.plc_expression)}</td><td>${configured?'已用':'备用'}</td></tr>`;
+      return `<tr${start?' class="cabinet-channel-module-start"':''}><td>${index+1}</td><td>${esc(module.module_no)}</td><td>${esc(module.module_type_name)}</td><td>${esc(channel)}</td><td>${esc(part)}</td><td>${esc(row.point_name||'—')}</td><td>${esc(row.signal_name||'—')}</td><td>${esc(row.sensor_type||'—')}</td><td class="mono">${esc(row.code)}</td><td class="mono">${esc(row.plc_expression)}</td></tr>`;
     }).join('');
     $('#cabinetChannelsStatus').textContent=rows.length?`共 ${modules.length} 个模块，${rows.length} 条通道 · 已用 ${used} / 备用 ${rows.length-used}`:'该控制柜暂无通道信息';
   }catch(error){if(request===cabinetChannelsRequest)$('#cabinetChannelsStatus').textContent='通道信息加载失败，请刷新重试：'+error.message;}
