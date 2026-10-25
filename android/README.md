@@ -1,6 +1,6 @@
 # Android 离线版
 
-正式安装包为 `output/apk/SignalPointManager-1.0.9-Nexus7.apk`。支持 Android 7.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
+正式安装包为 `output/apk/SignalPointManager-1.0.10-Nexus7.apk`。支持 Android 7.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
 
 ## 首次使用
 
@@ -48,3 +48,5 @@ IP 直连采用系统 CA 信任链、有效期验证和 VPS 证书公钥 SHA-256
 盘柜总览模块列表可点击“编辑”修改模块号，禁止同一项目同一盘柜内重号。保存后保留通道点位内容，并更新原自动生成的PLC地址及表达式；APP保存后触发同步。
 
 Nexus 7 兼容版：适配已连接的 Android 7.1.2（API25）、ARMv7、1280×800 横屏/800×1280 竖屏。同步兼容 SQLite 3.22，离线密码验证使用系统可用的 PBKDF2 算法，兼容旧系统并记录算法以保持后续升级可验证。
+
+Nexus 7 输入时按实际可见区域避让系统状态栏、导航栏和软键盘，防止系统栏压住 APP；键盘收起后自动恢复沉浸式全屏。

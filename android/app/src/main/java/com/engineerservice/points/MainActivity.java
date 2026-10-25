@@ -22,6 +22,7 @@ public class MainActivity extends Activity {
     android.net.ConnectivityManager.NetworkCallback callback;
     byte[] pendingExport;
     int pointKeyboardMode=0;
+    boolean legacyKeyboardVisible=false;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         ((android.app.job.JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE)).cancel(901);
@@ -34,6 +35,20 @@ public class MainActivity extends Activity {
         if(Build.VERSION.SDK_INT>=30)layout.setOnApplyWindowInsetsListener((view,insets)->{
             view.setPadding(0,0,0,insets.getInsets(android.view.WindowInsets.Type.ime()).bottom);
             return insets;
+        });
+        else layout.getViewTreeObserver().addOnGlobalLayoutListener(()->{
+            android.graphics.Rect frame=new android.graphics.Rect();
+            layout.getWindowVisibleDisplayFrame(frame);
+            if(frame.isEmpty()||layout.getHeight()==0)return;
+            int[] origin=new int[2];layout.getLocationOnScreen(origin);
+            int left=Math.max(0,frame.left-origin[0]),top=Math.max(0,frame.top-origin[1]);
+            int right=Math.max(0,origin[0]+layout.getWidth()-frame.right);
+            int bottom=Math.max(0,origin[1]+layout.getHeight()-frame.bottom);
+            if(layout.getPaddingLeft()!=left||layout.getPaddingTop()!=top||layout.getPaddingRight()!=right||layout.getPaddingBottom()!=bottom)
+                layout.setPadding(left,top,right,bottom);
+            boolean keyboard=getWindow().getDecorView().getHeight()-frame.bottom>getWindow().getDecorView().getHeight()/4;
+            if(legacyKeyboardVisible&&!keyboard)layout.postDelayed(this::enterFullscreen,150);
+            legacyKeyboardVisible=keyboard;
         });
         web=new WebView(this){
             @Override public android.view.inputmethod.InputConnection onCreateInputConnection(android.view.inputmethod.EditorInfo info){
