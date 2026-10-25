@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  const syncButton=document.getElementById('mobileSyncNavBtn');
  syncButton.addEventListener('click',()=>{closeDrawers();sync();});
  syncButton.addEventListener('contextmenu',event=>{event.preventDefault();closeDrawers();NativeStore.openSyncSettings();});
- const bar=document.createElement('div');bar.id='mobileSyncStatus';bar.style.cssText='padding:6px 14px;background:transparent;color:#173467;font-size:12px;position:fixed;bottom:0;left:0;right:0;z-index:9999;';bar.textContent=lastSync;document.body.append(bar);
+ const bar=document.createElement('div');bar.id='mobileSyncStatus';bar.style.cssText='padding:6px 14px;background:transparent;pointer-events:none;color:#173467;font-size:12px;position:fixed;bottom:0;left:0;right:0;z-index:9999;';bar.textContent=lastSync;document.body.append(bar);
  if(!NativeStore.initialized())sync();
 });
 

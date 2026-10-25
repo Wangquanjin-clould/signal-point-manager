@@ -1,7 +1,7 @@
 /* Compact point-entry keyboard. Values remain unsaved drafts until the user presses Save. */
 document.addEventListener('DOMContentLoaded',()=>{
   const selector='#pointsBody input[data-k="point_name"]';
-  let target=null,mode='letters';
+  let target=null,mode='letters',positionPending=false;
   const panel=document.createElement('section');
   panel.id='pointKeyboard';panel.hidden=true;panel.setAttribute('aria-label','设备点位键盘');
   panel.innerHTML='<div class="point-keyboard-toolbar"><strong>设备点位 <span id="pointKeyboardValue"></span></strong><div>'+[
@@ -9,14 +9,53 @@ document.addEventListener('DOMContentLoaded',()=>{
   ].map(([action,label])=>`<button type="button" data-action="${action}">${label}</button>`).join('')+'</div></div><div id="pointKeyboardKeys"></div>';
   document.body.append(panel);
   const keys=panel.querySelector('#pointKeyboardKeys'),preview=panel.querySelector('#pointKeyboardValue');
+  function reveal(){
+    target.scrollIntoView({block:'start',inline:'nearest'});
+    requestAnimationFrame(()=>{
+      if(!target?.isConnected)return;
+      const minTop=(document.querySelector('.topbar')?.getBoundingClientRect().bottom||0)+6;
+      const top=target.getBoundingClientRect().top;
+      if(top<minTop)window.scrollBy(0,top-minTop);
+      requestAnimationFrame(()=>position(false));
+    });
+  }
+  function position(allowScroll=true){
+    if(panel.hidden||!target?.isConnected)return;
+    const width=window.innerWidth,height=window.innerHeight,margin=8,gap=6;
+    const minTop=Math.max(margin,(document.querySelector('.topbar')?.getBoundingClientRect().bottom||0)+gap);
+    const rect=target.getBoundingClientRect();
+    if(rect.top<minTop-1||rect.bottom>height||rect.right<=0||rect.left>=width){
+      if(!allowScroll)return close();
+      reveal();return;
+    }
+    panel.style.width=Math.min(mode==='numbers'?300:580,width-margin*2)+'px';
+    panel.style.maxHeight=Math.max(80,height-minTop-margin-rect.height-gap)+'px';
+    const panelWidth=panel.offsetWidth,panelHeight=panel.offsetHeight;
+    document.documentElement.style.setProperty('--point-keyboard-height',panelHeight+'px');
+    const below=height-margin-rect.bottom-gap,above=rect.top-gap-minTop;
+    if(allowScroll&&below<panelHeight&&above<panelHeight){
+      reveal();return;
+    }
+    const top=below>=panelHeight?rect.bottom+gap:above>=panelHeight?rect.top-panelHeight-gap:
+      Math.max(minTop,Math.min(rect.bottom+gap,height-margin-panelHeight));
+    panel.style.left=Math.max(margin,Math.min(rect.left,width-margin-panelWidth))+'px';
+    panel.style.top=top+'px';
+    panel.dataset.placement=top>=rect.bottom?'below':'above';
+  }
+  function schedulePosition(){
+    if(positionPending||panel.hidden)return;positionPending=true;
+    requestAnimationFrame(()=>{positionPending=false;position(false);});
+  }
   function reserve(){
     document.documentElement.style.setProperty('--point-keyboard-height',panel.hidden?'0px':panel.offsetHeight+'px');
   }
   function render(){
-    const rows=mode==='letters'?['QWERTYUIOP','ASDFGHJKL','ZXCVBNM']:['1234567890'];
-    keys.innerHTML=rows.map(row=>'<div class="point-keyboard-row">'+Array.from(row).map(key=>`<button type="button" data-key="${key}">${key}</button>`).join('')+'</div>').join('');
+    panel.dataset.mode=mode;
+    const keyButton=key=>`<button type="button" data-key="${key}">${key}</button>`;
+    keys.innerHTML=mode==='numbers'?'<div class="point-keyboard-number-grid">'+Array.from('1234567890').map(keyButton).join('')+'</div>':
+      ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'].map(row=>'<div class="point-keyboard-row">'+Array.from(row).map(keyButton).join('')+'</div>').join('');
     panel.querySelectorAll('[data-action="letters"],[data-action="numbers"]').forEach(button=>button.classList.toggle('selected',button.dataset.action===mode));
-    preview.textContent=target?.value||'先填字母，再填编号';reserve();
+    preview.textContent=target?.value||'先填字母，再填编号';reserve();position();
   }
   function open(input){
     const different=target!==input;
@@ -24,7 +63,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     mode=/^[A-Z]/i.test(input.value)?'numbers':'letters';
     panel.hidden=false;document.body.classList.add('point-keyboard-open');
     NativeStore.pointKeyboard(3);render();
-    if(different)requestAnimationFrame(()=>input.scrollIntoView({block:'center',inline:'nearest'}));
+    if(different)requestAnimationFrame(()=>{input.scrollIntoView({block:'nearest',inline:'nearest'});position();});
   }
   function close(){
     target=null;panel.hidden=true;document.body.classList.remove('point-keyboard-open');reserve();NativeStore.pointKeyboard(0);
@@ -35,7 +74,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     target.setSelectionRange(Math.min(start,target.value.length),Math.min(start,target.value.length));
     target.dispatchEvent(new Event('input',{bubbles:true}));
     mode=/^[A-Z]/.test(target.value)?'numbers':'letters';render();
-    requestAnimationFrame(()=>target?.scrollIntoView({block:'center',inline:'nearest'}));
   }
   // Keep focus and the selection in the point field while pressing keyboard buttons.
   panel.addEventListener('pointerdown',event=>event.preventDefault());
@@ -63,6 +101,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   });
   new MutationObserver(()=>{if(target&&!target.isConnected)close();}).observe(document.getElementById('pointsBody'),{childList:true});
-  window.addEventListener('resize',reserve);
+  window.addEventListener('resize',schedulePosition);
+  window.addEventListener('scroll',schedulePosition,true);
   window.PointKeyboard={close,isOpen:()=>!panel.hidden};
 });

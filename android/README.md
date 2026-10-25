@@ -1,6 +1,6 @@
 # Android 离线版
 
-正式安装包为 `output/apk/SignalPointManager-1.0.11-Nexus7.apk`。支持 Android 7.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
+正式安装包为 `output/apk/SignalPointManager-1.0.12-Nexus7.apk`。支持 Android 7.0 及以上，使用系统 WebView 和本机私有 SQLite 数据库。
 
 ## 首次使用
 
@@ -50,3 +50,5 @@ IP 直连采用系统 CA 信任链、有效期验证和 VPS 证书公钥 SHA-256
 Nexus 7 兼容版：适配已连接的 Android 7.1.2（API25）、ARMv7、1280×800 横屏/800×1280 竖屏。同步兼容 SQLite 3.22，离线密码验证使用系统可用的 PBKDF2 算法，兼容旧系统并记录算法以保持后续升级可验证。
 
 Nexus 7 输入时按实际可见区域避让系统状态栏、导航栏和软键盘，防止系统栏压住 APP；键盘收起后自动恢复沉浸式全屏。
+
+内置点位键盘浮动贴近当前输入框，优先显示在下方，空间不足时改到上方；数字按1–9九宫格排列，0在下方。键盘随滚动及“下一行”重新定位，不覆盖当前输入框。
